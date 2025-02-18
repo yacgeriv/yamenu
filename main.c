@@ -68,7 +68,13 @@ typedef struct
 	mat4 projection;
 
 } YM_Context;
-    
+typedef struct
+{
+    size_t size;
+    char** list;
+  
+} YM_String_List;
+
 char input[528];
 uint32_t input_cursor = 0;
 
@@ -367,19 +373,19 @@ void ym_create_text_renderer(YM_Context* context)
 	FT_Done_Face(font_face);
 	FT_Done_FreeType(font);
 }
-void ym_map_directory()
+YM_String_List ym_map_directory()
 {
     #ifdef WIN32
 
-    DIR* apps_directory;
+    DIR* directory;
     
     struct dirent* dirent_pointer;
-    apps_directory = opendir("C:/ProgramData/Microsoft/Windows/Start Menu/Programs");
+    directory = opendir("C:/ProgramData/Microsoft/Windows/Start Menu/Programs");
 
     char** app_list = (char**)malloc(sizeof(char*));
 
     size_t size = 0;
-    while ((dirent_pointer = readdir(apps_directory)))
+    while ((dirent_pointer = readdir(directory)))
     {
         if(strstr(dirent_pointer->d_name, ".lnk"))
         {
@@ -391,6 +397,12 @@ void ym_map_directory()
         }
     }
     free(dirent_pointer);
+    
+    YM_String_List list;
+    list.list = app_list;
+    list.size = size;
+    
+    return list;
     
     #endif
 }
@@ -464,8 +476,16 @@ void ym_set_color_rgb(YM_Element* element, float r, float g, float b)
 void ym_set_scale(YM_Element* element, float x, float y)
 {
 	element->scale.x = x;	
-	element->scale.y = y;	
+	element->scale.y = y;
 }
+void ym_destroy_list(YM_String_List* list)
+{
+    for (uint32_t i = 0; i < list->size; i++)
+    {
+        free(list->list[i]);
+    }
+    free(list->list);
+}  
 int main (int argc, char **argv)
 {	
 	YM_Window ym_window;
@@ -517,8 +537,10 @@ int main (int argc, char **argv)
 	ym_set_position(text, rect.transform.x, ym_window.height - (rect.scale.y / 2));
 	ym_set_color_rgb(text, 0.0f, 0.0f, 0.0f);
 
-    ym_map_directory();
+    YM_String_List app_list;
     
+    app_list = ym_map_directory();
+
 	while (ym_window.running)
 	{
 		while (SDL_PollEvent(&event))
@@ -585,6 +607,6 @@ int main (int argc, char **argv)
 	}
 	
 	ym_clean_up(&ym_window);
-    
+    ym_destroy_list(&app_list);
 	return 0;
 }

@@ -4,7 +4,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 set(CMAKE_C_FLAGS "-g")
 
 file(GLOB SRC_FILES vendor/glad/glad/src/*.c)
-file(COPY build/compile_commands.json DESTINATION ${CMAKE_SOURCE_DIR})
+
+if(EXISTS "build/compile_commands.json")
+    file(COPY build/compile_commands.json DESTINATION ${CMAKE_SOURCE_DIR})
+endif()
+
 file(COPY vertex.glsl DESTINATION ${CMAKE_SOURCE_DIR}/build)
 file(COPY fragment.glsl DESTINATION ${CMAKE_SOURCE_DIR}/build)
 file(COPY vendor/SDL/build/SDL3.dll DESTINATION ${CMAKE_SOURCE_DIR}/build)
