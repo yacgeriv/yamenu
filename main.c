@@ -74,18 +74,25 @@ typedef struct
 } YM_Context;
 typedef struct
 {
-    size_t size;
-    char** list;
-  
-} YM_String_List;
-typedef struct
-{
     const char* label_text;
     float bg_pos_x, bg_pos_y;
     float text_pos_x, text_pos_y;
-    YM_Element* bg_element, text_element;
+    YM_Element* bg_element;
+    YM_Element* text_element;
     YM_Shader bg_shader, text_shader;
 } YM_Label;
+typedef struct
+{
+    size_t size;
+    YM_Label** list;
+
+} YM_Label_List;
+
+enum YM_Border_Style
+{
+    YM_BORDER,
+    YM_NO_BORDER
+};
 
 char input[528];
 uint32_t input_cursor = 0;
@@ -191,53 +198,55 @@ YM_Event ym_handle_events(SDL_EventType event_type)
 	}
 	return YM_NONE;
 }
-YM_Shader ym_create_shader(const char* vertex_path, const char* fragment_path)
+YM_Shader* ym_create_shader(const char* vertex_path, const char* fragment_path)
 {
 	const char* vertex_shader_data = ym_read_shader_file(vertex_path);
 	const char* fragment_shader_data = ym_read_shader_file(fragment_path);
 
-	YM_Shader shader;
-	shader.vertex = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(shader.vertex, 1, &vertex_shader_data, NULL);
-	glCompileShader(shader.vertex);
+	YM_Shader* shader;
+    shader = (YM_Shader*)malloc(sizeof(YM_Shader));
+    
+	shader->vertex = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(shader->vertex, 1, &vertex_shader_data, NULL);
+	glCompileShader(shader->vertex);
     
 	int success;
 	char info_log[512];
-	glGetShaderiv(shader.vertex, GL_COMPILE_STATUS, &success);
+	glGetShaderiv(shader->vertex, GL_COMPILE_STATUS, &success);
 	if (!success)
 	{
-		glGetShaderInfoLog(shader.vertex, 512, NULL, info_log);
+		glGetShaderInfoLog(shader->vertex, 512, NULL, info_log);
 		printf("[ERROR] vertex shader : %s \n", info_log);
 	}
 
-	shader.fragment = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(shader.fragment, 1, &fragment_shader_data, NULL);
-	glCompileShader(shader.fragment);
+	shader->fragment = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(shader->fragment, 1, &fragment_shader_data, NULL);
+	glCompileShader(shader->fragment);
 
-	glGetShaderiv(shader.fragment, GL_COMPILE_STATUS, &success);
+	glGetShaderiv(shader->fragment, GL_COMPILE_STATUS, &success);
 	if (!success)
 	{
-		glGetShaderInfoLog(shader.fragment, 512, NULL, info_log);
+		glGetShaderInfoLog(shader->fragment, 512, NULL, info_log);
 		printf("[ERROR] fragment shader : %s\n", info_log);
 	}
 
-	shader.program = glCreateProgram();
-	glAttachShader(shader.program, shader.vertex);
-	glAttachShader(shader.program, shader.fragment);
-	glLinkProgram(shader.program);
+	shader->program = glCreateProgram();
+	glAttachShader(shader->program, shader->vertex);
+	glAttachShader(shader->program, shader->fragment);
+	glLinkProgram(shader->program);
 
-	glGetProgramiv(shader.program, GL_LINK_STATUS, &success);
+	glGetProgramiv(shader->program, GL_LINK_STATUS, &success);
 	if (!success)
 	{
-		glGetProgramInfoLog(shader.program, 512, NULL, info_log);
+		glGetProgramInfoLog(shader->program, 512, NULL, info_log);
 		printf("[ERROR] program shader : %s\n", info_log);
 	}
 
 	free((char*)fragment_shader_data);
 	free((char*)vertex_shader_data);
 	
-	glDeleteShader(shader.vertex);
-	glDeleteShader(shader.fragment);
+	glDeleteShader(shader->vertex);
+	glDeleteShader(shader->fragment);
 	
 	return shader;
 }
@@ -288,7 +297,7 @@ YM_Element* ym_render_rectangle()
     
 	return element;
 }
-void ym_draw_element(YM_Element* element, YM_Shader* shader, YM_Context* context)
+void ym_draw_element(YM_Element* element, YM_Shader* shader, YM_Context* context, enum YM_Border_Style border)
 {
 	glm_mat4_identity(element->model);
 	glm_translate_x(element->model, element->transform.x);
@@ -299,7 +308,11 @@ void ym_draw_element(YM_Element* element, YM_Shader* shader, YM_Context* context
 	glUniformMatrix4fv(glGetUniformLocation(shader->program, "model"), 1, GL_FALSE, element->model[0]);
 	glUniformMatrix4fv(glGetUniformLocation(shader->program, "projection"), 1, GL_FALSE, context->projection[0]);
 	glUniform4fv(glGetUniformLocation(shader->program, "color"), 1, element->color.raw);
-	glUniform1f(glGetUniformLocation(shader->program, "time"), SDL_GetTicks() * 0.0002);	
+	glUniform1f(glGetUniformLocation(shader->program, "time"), SDL_GetTicks() * 0.0002);
+    if(border == YM_BORDER)
+    {
+        //TODO :: add border
+    }
 	
 	glBindVertexArray(element->vao);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -386,49 +399,16 @@ void ym_create_text_renderer(YM_Context* context)
 	FT_Done_Face(font_face);
 	FT_Done_FreeType(font);
 }
-YM_String_List ym_map_directory()
-{
-    #ifdef WIN32
-
-    DIR* directory;
-    
-    struct dirent* dirent_pointer;
-    directory = opendir("C:/ProgramData/Microsoft/Windows/Start Menu/Programs");
-
-    char** app_list = (char**)malloc(sizeof(char*));
-
-    size_t size = 0;
-    while ((dirent_pointer = readdir(directory)))
-    {
-        if(strstr(dirent_pointer->d_name, ".lnk"))
-        {
-            size++;
-            app_list = (char**)realloc(app_list, sizeof(char*) * size);
-            app_list[size - 1] = (char*)malloc(strlen(dirent_pointer->d_name)
-                                                      * sizeof(char));
-            strcpy(app_list[size - 1], dirent_pointer->d_name);
-        }
-    }
-    free(dirent_pointer);
-    
-    YM_String_List list;
-    list.list = app_list;
-    list.size = size;
-    
-    return list;
-    
-    #endif
-}
-void ym_render_text(const char* text, YM_Context* context, YM_Shader* shader, YM_Element* element)
+void ym_draw_text(const char* text, YM_Context* context, YM_Element* element)
 {
 	int x = element->transform.x;
 	int y = element->transform.y;
 	element->last_glyph_x = 0;	
 	
-	glUseProgram(shader->program);
+	glUseProgram(element->shader->program);
 
-    glUniform4fv(glGetUniformLocation(shader->program, "color"), 1, element->color.raw);
-    glUniformMatrix4fv(glGetUniformLocation(shader->program, "projection"), 1, GL_FALSE, context->projection[0]);
+    glUniform4fv(glGetUniformLocation(element->shader->program, "color"), 1, element->color.raw);
+    glUniformMatrix4fv(glGetUniformLocation(element->shader->program, "projection"), 1, GL_FALSE, context->projection[0]);
 
 	glActiveTexture(GL_TEXTURE0);
     glBindVertexArray(element->vao);
@@ -491,7 +471,7 @@ void ym_set_scale(YM_Element* element, float x, float y)
 	element->scale.x = x;	
 	element->scale.y = y;
 }
-void ym_destroy_list(YM_String_List* list)
+void ym_destroy_list(YM_Label_List* list)
 {
     for (uint32_t i = 0; i < list->size; i++)
     {
@@ -499,32 +479,103 @@ void ym_destroy_list(YM_String_List* list)
     }
     free(list->list);
 }
-YM_Label ym_render_label(const char* label_txt, float x, float y, YM_Context* context)
+YM_Element* ym_render_text(const char* text, float x, float y, YM_Context* context)
+{
+    YM_Element* element;
+    element = (YM_Element*)malloc(sizeof(YM_Element));
+    
+    element->transform.x = x;
+    element->transform.y = y;
+    
+    element->shader = ym_create_shader("glyph_v.glsl", "glyph_f.glsl");
+    
+	ym_set_scale(element, 0.5, 0.5);
+	ym_set_position(element, element->transform.x, element->transform.y);
+	ym_set_color_rgb(element, (float)0x39/255, (float)0x206/255, (float)0x64/255);
+       
+    glGenVertexArrays(1, &element->vao);
+    glGenBuffers(1, &element->vbo);
+    glBindVertexArray(element->vao);
+    glBindBuffer(GL_ARRAY_BUFFER, element->vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    return element;
+}
+YM_Label* ym_render_label(const char* label_txt, float x, float y, YM_Context* context)
 {
     YM_Label* label;
     label = (YM_Label*)malloc(sizeof(YM_Label));
-    
+
+    float text_offset = 10.f;
+
     label->bg_pos_x = x;
     label->bg_pos_y = y;
     label->label_text = label_txt;
     
-    YM_Shader bg_element_shader = ym_create_shader("build/vertex.glsl", "build/fragment.glsl");
+    YM_Element* label_bg = ym_render_rectangle();
     
-    YM_Element *label_bg = ym_render_rectangle();
-
     ym_set_scale(label_bg, context->window->width, 40.0f);    
     ym_set_position(label_bg, x, y);
-    ym_set_color_rgb(label_bg, (float)0x49/255,(float)0x20/255, (float)0x20/255);
+    ym_set_color_rgb(label_bg, (float)0x20/255,(float)0x20/255, (float)0x20/255);
     
-    label->bg_shader = bg_element_shader;
+    label->bg_shader = *ym_create_shader("build/vertex.glsl", "build/fragment.glsl");
+    label->text_element = ym_render_text(label_txt, label_bg->transform.x + text_offset , label_bg->transform.y , context);
     
     label->bg_element = label_bg;
-    //    printf(" it should be %f but %f\n", y, label->bg_element->scale.x);
-    return *label;
+    
+    return label;
 }
 void ym_draw_label(YM_Label* label, YM_Context* context)
 {
-    ym_draw_element(label->bg_element, &label->bg_shader, context);
+    ym_draw_element(label->bg_element, &label->bg_shader, context, YM_NO_BORDER);
+    ym_draw_text(label->label_text, context, label->text_element);
+}
+YM_Label_List ym_map_directory(YM_Context* context)
+{
+    #ifdef WIN32
+
+    DIR* directory;
+    
+    struct dirent* dirent_pointer;
+    directory = opendir("C:/ProgramData/Microsoft/Windows/Start Menu/Programs");
+
+    YM_Label** app_list = (YM_Label**)malloc(sizeof(YM_Label*));
+
+    size_t size = 0;
+    float offset_y = 500;
+    
+
+    while ((dirent_pointer = readdir(directory)))
+    {
+        if(strstr(dirent_pointer->d_name, ".lnk"))
+        {
+            offset_y -= 100;
+            size++;
+            app_list = (YM_Label**)realloc(app_list, sizeof(YM_Label*) * size);
+            app_list[size - 1] = (YM_Label*)malloc(sizeof(YM_Label));
+            app_list[size - 1] = ym_render_label(dirent_pointer->d_name, 0, offset_y, context);
+        }
+    }
+    free(dirent_pointer);
+    
+    YM_Label_List list;
+    list.list = app_list;
+    list.size = size;
+    
+    return list;
+    
+    #endif
+}
+void ym_draw_label_list(YM_Label_List* list, YM_Context* context)
+{
+    for (int32_t i = 0; i < list->size; i++)
+    {
+        ym_draw_label(list->list[i], context);
+    }
 }
 int main (int argc, char **argv)
 {	
@@ -538,52 +589,37 @@ int main (int argc, char **argv)
     
 	ym_create_text_renderer(&context);
     
-	YM_Shader rect_shader = ym_create_shader("build/vertex.glsl", "build/fragment.glsl");
+	YM_Shader* rect_shader = ym_create_shader("build/vertex.glsl", "build/fragment.glsl");
+    
 	YM_Element* rect = ym_render_rectangle();
 
-	YM_Shader cursor_block_shader = ym_create_shader("build/vertex.glsl", "build/fragment.glsl");
+	YM_Shader* cursor_block_shader = ym_create_shader("build/vertex.glsl", "build/fragment.glsl");
 	YM_Element* cursor_block = ym_render_rectangle();
-
 
 	ym_window.running = true;
 
 	glm_ortho(0.0, ym_window.width, 0.0 , ym_window.height, -2.0, 1.0f, context.projection);
-	
-	YM_Shader text_shader = ym_create_shader("glyph_v.glsl", "glyph_f.glsl");
-	YM_Element* text = malloc(sizeof(YM_Element));
-
-    glGenVertexArrays(1, &text->vao);
-    glGenBuffers(1, &text->vbo);
-    glBindVertexArray(text->vao);
-    glBindBuffer(GL_ARRAY_BUFFER, text->vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
 
 	SDL_Event event;
 	
 	// NOTE:------input area-------
-	
-	ym_set_scale(rect, ym_window.width, 50);
+
+    ym_set_scale(rect, ym_window.width, 50);
 	ym_set_position(rect, 0, ym_window.height - rect->scale.y);	
-	ym_set_color_rgb(rect, 0.0f, 0.87f, 1.0f);
-
-	
+	ym_set_color_rgb(rect, (float)0x20/255, (float)0x20/255, (float)0x20/255);
+    
 	ym_set_scale(cursor_block, 15, 25);
-	ym_set_position(cursor_block, (ym_window.width - cursor_block->scale.x) / 2, (ym_window.height - cursor_block->scale.y) / 2);	
+	ym_set_position(cursor_block, (ym_window.width - cursor_block->scale.x) / 2.2, (ym_window.height - cursor_block->scale.y) / 2);	
 	ym_set_color_rgb(cursor_block, 0.0f, 0.87f, 1.0f);
-	
-	ym_set_scale(text, 0.5, 0.5);
-	ym_set_position(text, rect->transform.x, ym_window.height - (rect->scale.y / 2));
-	ym_set_color_rgb(text, 0.0f, 0.0f, 0.0f);
 
-    YM_String_List app_list;
+    YM_Element* input_text = ym_render_text(input, 10, ym_window.height - (rect->scale.y / 2), &context);
     
-    app_list = ym_map_directory();
+    YM_Label_List app_list;
     
-    YM_Label app_labels = ym_render_label("some label", 0, ym_window.height - 100.f, &context);
+    app_list = ym_map_directory(&context);
+
+
+    //YM_Label* app_labels = ym_render_label("some label", 0, ym_window.height - 100.f, &context);
 
     SDL_StartTextInput(ym_window.sdl_window);
     bool is_typing = false;
@@ -609,7 +645,7 @@ int main (int argc, char **argv)
                 case SDL_EVENT_KEY_DOWN:
                     if(event.key.key == SDLK_BACKSPACE)
                     {
-                        if(input_cursor >= 0)
+                        if(input_cursor > 0)
                         {
                             is_typing = true;
                             input[--input_cursor] = '\0';
@@ -629,36 +665,21 @@ int main (int argc, char **argv)
 			}
 		}
 
-		ym_set_position(cursor_block, text->last_glyph_x + cursor_block->
-                        scale.x, text->transform.y - 6);
+		ym_set_position(cursor_block, input_text->last_glyph_x + cursor_block->
+                        scale.x, input_text->transform.y - 6);
 
 		glViewport(0, 0, ym_window.width, ym_window.height);
-		glClearColor(0.04f, 0.0f, 0.06f, 1.0f);
+		glClearColor((float)0x20/255, (float)0x20/255, (float)0x20/255, (float)0x20/255);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		//-------render objects--------
-	
-		if(ym_check_mouse_intersection(mouse, *rect))
-		{
-			rect->color.x = 0.f;
-			rect->color.z = 1.0f;
-		}
-		else
-		{
-			rect->color.x = 1.0f;
-			rect->color.z = 0.0f;
-		}
-		if(ym_check_mouse_click(&mouse, rect))
-		{
-			rect->transform.x += 0.008;
-		}
 
-		ym_draw_element(rect, &rect_shader, &context);
+		ym_draw_element(rect, rect_shader, &context, YM_NO_BORDER);
 		
-		ym_draw_element(cursor_block, &cursor_block_shader, &context);
+		ym_draw_element(cursor_block, cursor_block_shader, &context, YM_NO_BORDER);
 		
-		ym_render_text(input, &context, &text_shader, text);	
-        ym_draw_label(&app_labels, &context);
+		ym_draw_text(input, &context, input_text);
+        ym_draw_label_list(&app_list, &context);
 		ym_swap_buffers(&ym_window);
 	}
 	
