@@ -115,7 +115,7 @@ YM_Window ym_create_window() {
     }
     tmp_window.gl_context = SDL_GL_CreateContext(tmp_window.sdl_window);
     if (!tmp_window.gl_context) {
-        perror("failed to create opengl context");
+        perror("failed to create opengl context"); 
     }
     SDL_GL_MakeCurrent(tmp_window.sdl_window, tmp_window.gl_context);
 
@@ -537,8 +537,8 @@ void ym_cursor_point_to(YM_Element *cursor, float x, float y) {
 	vec3s diff = {cursor->transform.x - x, cursor->transform.y - y};
 	glms_normalize(diff);
 	
-	cursor->transform.x -= diff.x * 0.1;
-	cursor->transform.y -= diff.y * 0.1;
+	cursor->transform.x -= diff.x * 0.2;
+	cursor->transform.y -= diff.y * 0.2;
 
 }
 void ym_draw_label_list(YM_Label_List *list, YM_Context *context) {
@@ -616,7 +616,9 @@ int main(int argc, char **argv) {
                     if (input_cursor > 0) {
                         is_typing = true;
                         input[--input_cursor] = '\0';
-                        is_typing = false;
+						cursor_target_x = input_text->last_glyph_x ;
+						cursor_target_y = input_text->transform.y - 2.6;
+                        is_typing = false;						
                     }
                 }
                 if (event.key.key == SDLK_DOWN) {
@@ -629,10 +631,19 @@ int main(int argc, char **argv) {
 						cursor_index = 0;
 					}
                 }
+				if (event.key.key == SDLK_UP) {
+					if (cursor_index != 0) {
+						cursor_index--;
+						cursor_target_x = app_list.list[cursor_index]->text_element->transform.x;
+						cursor_target_y = app_list.list[cursor_index]->text_element->transform.y;
+					}
+                }
                 break;
             case SDL_EVENT_TEXT_INPUT:
                 if (!is_typing && input_cursor < sizeof(input)) {
                     input[input_cursor++] = event.text.text[0];
+					cursor_target_x = input_text->last_glyph_x + cursor_block->scale.x * 2.1 ;
+					cursor_target_y = input_text->transform.y - 2.6;
                     break;
                 }
             default:
@@ -642,16 +653,11 @@ int main(int argc, char **argv) {
         }
 
         ym_cursor_point_to(cursor_block, cursor_target_x, cursor_target_y);
-        
-        //        ym_set_position(cursor_block, input_text->last_glyph_x + cursor_block->scale.x,
-        //                input_text->transform.y - 6);
 
         glViewport(0, 0, ym_window.width, ym_window.height);
         glClearColor((float)0x20 / 255, (float)0x20 / 255, (float)0x20 / 255,
                      (float)0x20 / 255);
         glClear(GL_COLOR_BUFFER_BIT);
-
-        //-------render objects--------
 
         ym_draw_element(rect, rect_shader, &context, YM_NO_BORDER);
         ym_draw_text(input, &context, input_text);
