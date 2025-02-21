@@ -471,7 +471,7 @@ YM_Label *ym_render_label(const char *label_txt, float x, float y,
 
 	ym_set_scale(label_bg, context->window->width, 40.0f);
 	ym_set_position(label_bg, x, y);
-	ym_set_color_rgb(label_bg, (float)0x20 / 255, (float)0x20 / 255,
+	ym_set_color_rgb(label_bg, (float)0x34 / 255, (float)0x20 / 255,
 					 (float)0x20 / 255);
 
 	label->bg_shader =
@@ -493,56 +493,29 @@ void ym_draw_label(YM_Label *label, YM_Context *context) {
 }
 YM_Label_List ym_map_directory(YM_Context *context) {
 	YM_Label_List list;
+	float offset_y = 400;
 
-    #ifdef __MINGW32__
-
-	DIR *directory;
-
-	struct dirent *dirent_pointer;
-	directory = opendir("C:/ProgramData/Microsoft/Windows/Start Menu/Programs");
-
-	YM_Label **app_list = (YM_Label **)malloc(sizeof(YM_Label *));
-
-	size_t size = 0;
-	float offset_y = 500;
-
-	while ((dirent_pointer = readdir(directory))) {
-		if (strstr(dirent_pointer->d_name, ".lnk")) {
-			char temp_str[255];
-			strncpy(temp_str, dirent_pointer->d_name, 254);
-			offset_y -= 100;
-			size++;
-			app_list = (YM_Label **)realloc(app_list, sizeof(YM_Label *) * size);
-			app_list[size - 1] = (YM_Label *)malloc(sizeof(YM_Label));
-			app_list[size - 1] = ym_render_label(temp_str, 0, offset_y, context);
-		}
-	}
-	free(dirent_pointer);
-	closedir(directory);
-	list.list = app_list;
-	list.size = size;
-
-	return list;
-
-    #endif
-
-    #ifdef __linux__
-	
-	DIR *directory;
+    DIR *directory;
 
 	struct dirent *dirent_pointer;
+
+#ifdef __linux__
 	directory = opendir("/usr/bin/");
+#endif
 
+#ifdef __MINGW32__
+    directory = opendir("C:/ProgramData/Microsoft/Windows/Start Menu/Programs");
+#endif
+    
 	YM_Label **app_list = (YM_Label **)malloc(sizeof(YM_Label *));
 
 	size_t size = 0;
-	float offset_y = 500;
-
+	
 	while ((dirent_pointer = readdir(directory))) {
-		if (strlen(dirent_pointer->d_name) > 0) {
+      if (strlen(dirent_pointer->d_name) > 0 && strcmp(dirent_pointer->d_name, "..") && strcmp(dirent_pointer->d_name, ".")) {
 			char temp_str[255];
 			strncpy(temp_str, dirent_pointer->d_name, 254);
-			offset_y -= 100;
+			offset_y -= 50;
 			size++;
 			app_list = (YM_Label **)realloc(app_list, sizeof(YM_Label *) * size);
 			app_list[size - 1] = (YM_Label *)malloc(sizeof(YM_Label));
@@ -556,8 +529,6 @@ YM_Label_List ym_map_directory(YM_Context *context) {
 	list.size = size;
 	
 	return list;
-	
-    #endif
 }
 void ym_cursor_point_to(YM_Element *cursor, float x, float y) {
 	vec3s diff = {cursor->transform.x - x, cursor->transform.y - y};
@@ -647,7 +618,7 @@ int main(int argc, char **argv) {
 				if (event.key.key == SDLK_DOWN) {
 					if (cursor_index < app_list.size) {
 						cursor_target_x =
-							app_list.list[cursor_index]->text_element->transform.x;
+							app_list.list[cursor_index]->text_element->last_glyph_x + cursor_block->scale.x;
 						cursor_target_y =
 							app_list.list[cursor_index]->text_element->transform.y;
 						cursor_index++;
@@ -659,7 +630,7 @@ int main(int argc, char **argv) {
 					if (cursor_index != 0) {
 						cursor_index--;
 						cursor_target_x =
-							app_list.list[cursor_index]->text_element->transform.x;
+							app_list.list[cursor_index]->text_element->last_glyph_x + cursor_block->scale.x;
 						cursor_target_y =
 							app_list.list[cursor_index]->text_element->transform.y;
 					}
