@@ -4,6 +4,8 @@
 #include "SDL3/SDL_mouse.h"
 #include "SDL3/SDL_oldnames.h"
 #include "SDL3/SDL_timer.h"
+#include "cglm/struct/vec3.h"
+#include "cglm/vec3.h"
 #include "ft2build.h"
 #include "glad/glad.h"
 #include <SDL3/SDL.h>
@@ -42,6 +44,7 @@ typedef struct {
     vec4s color;
     mat4 model;
     float last_glyph_x;
+    float glyph_size;
 
 } YM_Element;
 
@@ -66,7 +69,7 @@ typedef struct {
 
 } YM_Context;
 typedef struct {
-    const char *label_text;
+    char label_text[255];
     float bg_pos_x, bg_pos_y;
     float text_pos_x, text_pos_y;
     YM_Element *bg_element;
@@ -79,10 +82,16 @@ typedef struct {
 
 } YM_Label_List;
 
-enum YM_Border_Style { YM_BORDER, YM_NO_BORDER };
+enum YM_Border_Style {
+	YM_BORDER,
+	YM_NO_BORDER
+};
 
 char input[528];
 uint32_t input_cursor = 0;
+
+float cursor_target_x, cursor_target_y = 0;
+int cursor_index = 0;
 
 YM_Window ym_create_window() {
     YM_Window tmp_window;
@@ -279,7 +288,9 @@ void ym_draw_element(YM_Element *element, YM_Shader *shader,
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
 }
-float ym_convert_mouse_y(YM_Mouse *mouse) { return -mouse->y + 500; }
+float ym_convert_mouse_y(YM_Mouse *mouse) {
+	return -mouse->y + 500;
+}
 bool ym_check_mouse_intersection(YM_Mouse mouse, YM_Element element) {
     float mouse_y = ym_convert_mouse_y(&mouse);
 
@@ -383,6 +394,7 @@ void ym_draw_text(const char *text, YM_Context *context, YM_Element *element) {
         float h = current_glyph.size.y * element->scale.x;
 
         element->last_glyph_x = xpos;
+        element->glyph_size = h;
 
         float vertices[6][4] = {
             {xpos, ypos + h, 0.0f, 0.0f},    {xpos, ypos, 0.0f, 1.0f},
@@ -458,7 +470,8 @@ YM_Label *ym_render_label(const char *label_txt, float x, float y,
 
     label->bg_pos_x = x;
     label->bg_pos_y = y;
-    label->label_text = label_txt;
+    
+    strncpy(label->label_text, label_txt, 254);
 
     YM_Element *label_bg = ym_render_rectangle();
 
@@ -472,9 +485,10 @@ YM_Label *ym_render_label(const char *label_txt, float x, float y,
     label->text_element =
         ym_render_text(label_txt, label_bg->transform.x + text_offset,
                        label_bg->transform.y, context);
-
     label->bg_element = label_bg;
 
+    ym_set_position(label->text_element, label->text_element->transform.x, label->bg_element->transform.y - (label->text_element->glyph_size) / 2);
+    
     return label;
 }
 void ym_draw_label(YM_Label *label, YM_Context *context) {
@@ -496,12 +510,13 @@ YM_Label_List ym_map_directory(YM_Context *context) {
 
     while ((dirent_pointer = readdir(directory))) {
         if (strstr(dirent_pointer->d_name, ".lnk")) {
+            char temp_str[255];
+            strncpy(temp_str, dirent_pointer->d_name, 254);
             offset_y -= 100;
             size++;
             app_list = (YM_Label **)realloc(app_list, sizeof(YM_Label *) * size);
             app_list[size - 1] = (YM_Label *)malloc(sizeof(YM_Label));
-            app_list[size - 1] =
-                ym_render_label(dirent_pointer->d_name, 0, offset_y, context);
+            app_list[size - 1] = ym_render_label(temp_str, 0, offset_y, context);
         }
     }
     free(dirent_pointer);
@@ -513,6 +528,18 @@ YM_Label_List ym_map_directory(YM_Context *context) {
     return list;
 
 #endif
+
+#ifdef LINUX
+#endif
+    
+}
+void ym_cursor_point_to(YM_Element *cursor, float x, float y) {
+	vec3s diff = {cursor->transform.x - x, cursor->transform.y - y};
+	glms_normalize(diff);
+	
+	cursor->transform.x -= diff.x * 0.1;
+	cursor->transform.y -= diff.y * 0.1;
+
 }
 void ym_draw_label_list(YM_Label_List *list, YM_Context *context) {
     for (int32_t i = 0; i < list->size; i++) {
@@ -535,9 +562,7 @@ int main(int argc, char **argv) {
 
     YM_Element *rect = ym_render_rectangle();
 
-    YM_Shader *cursor_block_shader =
-        ym_create_shader("build/vertex.glsl", "build/fragment.glsl");
-    YM_Element *cursor_block = ym_render_rectangle();
+
 
     ym_window.running = true;
 
@@ -553,11 +578,6 @@ int main(int argc, char **argv) {
     ym_set_color_rgb(rect, (float)0x20 / 255, (float)0x20 / 255,
                      (float)0x20 / 255);
 
-    ym_set_scale(cursor_block, 15, 25);
-    ym_set_position(cursor_block, (ym_window.width - cursor_block->scale.x) / 2.2,
-                    (ym_window.height - cursor_block->scale.y) / 2);
-    ym_set_color_rgb(cursor_block, 0.0f, 0.87f, 1.0f);
-
     YM_Element *input_text = ym_render_text(
                                             input, 10, ym_window.height - (rect->scale.y / 2), &context);
 
@@ -565,9 +585,15 @@ int main(int argc, char **argv) {
 
     app_list = ym_map_directory(&context);
 
-    // YM_Label* app_labels = ym_render_label("some label", 0, ym_window.height -
-    // 100.f, &context);
+    YM_Shader *cursor_block_shader =
+        ym_create_shader("build/vertex.glsl", "build/fragment.glsl");
+    YM_Element *cursor_block = ym_render_rectangle();
 
+    ym_set_scale(cursor_block, 15, 25);
+    ym_set_position(cursor_block, (ym_window.width - cursor_block->scale.x) / 2.2,
+                    (ym_window.height - cursor_block->scale.y) / 2);
+    ym_set_color_rgb(cursor_block, 0.0f, 0.87f, 1.0f);
+    
     SDL_StartTextInput(ym_window.sdl_window);
     bool is_typing = false;
 
@@ -593,6 +619,16 @@ int main(int argc, char **argv) {
                         is_typing = false;
                     }
                 }
+                if (event.key.key == SDLK_DOWN) {
+					if (cursor_index < app_list.size) {
+						cursor_target_x = app_list.list[cursor_index]->text_element->transform.x;
+						cursor_target_y = app_list.list[cursor_index]->text_element->transform.y;
+						cursor_index++;
+					}
+					else {
+						cursor_index = 0;
+					}
+                }
                 break;
             case SDL_EVENT_TEXT_INPUT:
                 if (!is_typing && input_cursor < sizeof(input)) {
@@ -605,9 +641,10 @@ int main(int argc, char **argv) {
             }
         }
 
-        ym_set_position(cursor_block,
-                        input_text->last_glyph_x + cursor_block->scale.x,
-                        input_text->transform.y - 6);
+        ym_cursor_point_to(cursor_block, cursor_target_x, cursor_target_y);
+        
+        //        ym_set_position(cursor_block, input_text->last_glyph_x + cursor_block->scale.x,
+        //                input_text->transform.y - 6);
 
         glViewport(0, 0, ym_window.width, ym_window.height);
         glClearColor((float)0x20 / 255, (float)0x20 / 255, (float)0x20 / 255,
@@ -617,11 +654,9 @@ int main(int argc, char **argv) {
         //-------render objects--------
 
         ym_draw_element(rect, rect_shader, &context, YM_NO_BORDER);
-
-        ym_draw_element(cursor_block, cursor_block_shader, &context, YM_NO_BORDER);
-
         ym_draw_text(input, &context, input_text);
         ym_draw_label_list(&app_list, &context);
+        ym_draw_element(cursor_block, cursor_block_shader, &context, YM_NO_BORDER);
         ym_swap_buffers(&ym_window);
     }
 
