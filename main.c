@@ -140,9 +140,7 @@ char *ym_read_shader_file(const char *path) {
 	}
 
 	fseek(shader_file, 0, SEEK_END);
-
 	shader_size = ftell(shader_file);
-
 	fseek(shader_file, 0, SEEK_SET);
 
 	dest = malloc(sizeof(char) * (shader_size) + 1);
@@ -153,6 +151,7 @@ char *ym_read_shader_file(const char *path) {
 	}
 
 	dest[i] = '\0';
+	fclose(shader_file);
 	return dest;
 }
 void ym_swap_buffers(YM_Window *window) {
@@ -493,7 +492,9 @@ void ym_draw_label(YM_Label *label, YM_Context *context) {
 	ym_draw_text(label->label_text, context, label->text_element);
 }
 YM_Label_List ym_map_directory(YM_Context *context) {
-#ifdef WIN32
+	YM_Label_List list;
+
+    #ifdef __MINGW32__
 
 	DIR *directory;
 
@@ -517,17 +518,46 @@ YM_Label_List ym_map_directory(YM_Context *context) {
 		}
 	}
 	free(dirent_pointer);
-
-	YM_Label_List list;
+	closedir(directory);
 	list.list = app_list;
 	list.size = size;
 
 	return list;
 
-#endif
+    #endif
 
-#ifdef LINUX
-#endif
+    #ifdef __linux__
+	
+	DIR *directory;
+
+	struct dirent *dirent_pointer;
+	directory = opendir("/usr/bin/");
+
+	YM_Label **app_list = (YM_Label **)malloc(sizeof(YM_Label *));
+
+	size_t size = 0;
+	float offset_y = 500;
+
+	while ((dirent_pointer = readdir(directory))) {
+		if (strlen(dirent_pointer->d_name) > 0) {
+			char temp_str[255];
+			strncpy(temp_str, dirent_pointer->d_name, 254);
+			offset_y -= 100;
+			size++;
+			app_list = (YM_Label **)realloc(app_list, sizeof(YM_Label *) * size);
+			app_list[size - 1] = (YM_Label *)malloc(sizeof(YM_Label));
+			app_list[size - 1] = ym_render_label(temp_str, 0, offset_y, context);
+		}
+	}
+	free(dirent_pointer);
+	closedir(directory);
+	
+	list.list = app_list;
+	list.size = size;
+	
+	return list;
+	
+    #endif
 }
 void ym_cursor_point_to(YM_Element *cursor, float x, float y) {
 	vec3s diff = {cursor->transform.x - x, cursor->transform.y - y};
