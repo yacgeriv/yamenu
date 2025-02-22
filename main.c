@@ -23,7 +23,7 @@
 typedef struct {
 	const char *title;
 	uint32_t width;
-	uint32_t height;
+    uint32_t height;
 	bool running;
 	SDL_Window *sdl_window;
 	SDL_GLContext gl_context;
@@ -34,7 +34,7 @@ typedef struct {
 	unsigned int vertex;
 	unsigned int fragment;
 	unsigned int program;
-
+    
 } YM_Shader;
 typedef struct {
 	unsigned int vao, vbo, ebo;
@@ -45,14 +45,13 @@ typedef struct {
 	mat4 model;
 	float last_glyph_x;
 	float glyph_size;
-
+ 
 } YM_Element;
 
 typedef struct {
 	float x, y;
 	float screen_x, screen_y;
-	bool left_button_down;
-
+    bool left_button_down;
 } YM_Mouse;
 typedef struct {
 	unsigned int texture_id;
@@ -60,13 +59,11 @@ typedef struct {
 	vec2s bearing;
 	unsigned int advance;
 	char ascii;
-
 } YM_Glyph;
 typedef struct {
 	YM_Glyph characters[128];
 	mat4 projection;
 	YM_Window *window;
-
 } YM_Context;
 typedef struct {
 	char label_text[255];
@@ -78,8 +75,12 @@ typedef struct {
 } YM_Label;
 typedef struct {
 	size_t size;
-	YM_Label **list;
-
+	char **list;
+} YM_String_List;
+typedef struct {
+	size_t size;
+	YM_Label list[6];
+    float line_offset;
 } YM_Label_List;
 
 enum YM_Border_Style { YM_BORDER, YM_NO_BORDER };
@@ -88,7 +89,9 @@ char input[528];
 uint32_t input_cursor = 0;
 
 float cursor_target_x, cursor_target_y = 0;
-int cursor_index = 0;
+uint32_t cursor_index = 0;
+
+const uint32_t MAX_LABEL_COUNT = 6;
 
 YM_Window ym_create_window() {
 	YM_Window tmp_window;
@@ -295,7 +298,7 @@ bool ym_check_mouse_intersection(YM_Mouse mouse, YM_Element element) {
 			return true;
 		}
 	}
-	return false;
+ return false;
 }
 bool ym_check_mouse_click(YM_Mouse *mouse, YM_Element *element) {
 	if (ym_check_mouse_intersection(*mouse, *element) &&
@@ -422,7 +425,7 @@ void ym_set_scale(YM_Element *element, float x, float y) {
 	element->scale.x = x;
 	element->scale.y = y;
 }
-void ym_destroy_list(YM_Label_List *list) {
+void ym_destroy_list(YM_String_List *list) {
 	for (uint32_t i = 0; i < list->size; i++) {
 		free(list->list[i]);
 	}
@@ -467,19 +470,18 @@ YM_Label *ym_render_label(const char *label_txt, float x, float y,
 
 	strncpy(label->label_text, label_txt, 254);
 
-	YM_Element *label_bg = ym_render_rectangle();
+	label->bg_element = ym_render_rectangle();
 
-	ym_set_scale(label_bg, context->window->width, 40.0f);
-	ym_set_position(label_bg, x, y);
-	ym_set_color_rgb(label_bg, (float)0x34 / 255, (float)0x20 / 255,
+	ym_set_scale(label->bg_element, context->window->width, 40.0f);
+	ym_set_position(label->bg_element, x, y);
+	ym_set_color_rgb(label->bg_element, (float)0x34 / 255, (float)0x20 / 255,
 					 (float)0x20 / 255);
 
 	label->bg_shader =
 		*ym_create_shader("build/vertex.glsl", "build/fragment.glsl");
 	label->text_element =
-		ym_render_text(label_txt, label_bg->transform.x + text_offset,
-					   label_bg->transform.y, context);
-	label->bg_element = label_bg;
+		ym_render_text(label_txt, label->bg_element->transform.x + text_offset,
+					   label->bg_element->transform.y, context);
 
 	ym_set_position(label->text_element, label->text_element->transform.x,
 					label->bg_element->transform.y -
@@ -488,38 +490,43 @@ YM_Label *ym_render_label(const char *label_txt, float x, float y,
 	return label;
 }
 void ym_draw_label(YM_Label *label, YM_Context *context) {
-	ym_draw_element(label->bg_element, &label->bg_shader, context, YM_NO_BORDER);
+   	ym_draw_element(label->bg_element, &label->bg_shader, context, YM_NO_BORDER);
 	ym_draw_text(label->label_text, context, label->text_element);
 }
-YM_Label_List ym_map_directory(YM_Context *context) {
-	YM_Label_List list;
-	float offset_y = 400;
+YM_String_List ym_map_directory(YM_Context *context) {
+	YM_String_List list;
 
     DIR *directory;
 
 	struct dirent *dirent_pointer;
 
 #ifdef __linux__
-	directory = opendir("/usr/bin/");
+	directory = opendir("/usr/share/applications");
 #endif
 
 #ifdef __MINGW32__
     directory = opendir("C:/ProgramData/Microsoft/Windows/Start Menu/Programs");
 #endif
     
-	YM_Label **app_list = (YM_Label **)malloc(sizeof(YM_Label *));
+	char **app_list = (char **)malloc(sizeof(char *));
 
 	size_t size = 0;
 	
 	while ((dirent_pointer = readdir(directory))) {
-      if (strlen(dirent_pointer->d_name) > 0 && strcmp(dirent_pointer->d_name, "..") && strcmp(dirent_pointer->d_name, ".")) {
-			char temp_str[255];
-			strncpy(temp_str, dirent_pointer->d_name, 254);
-			offset_y -= 50;
+      if (strlen(dirent_pointer->d_name) > 0 && strcmp(dirent_pointer->d_name, "..")
+          && strcmp(dirent_pointer->d_name, ".") && strstr(dirent_pointer->d_name, ".desktop")) {
 			size++;
-			app_list = (YM_Label **)realloc(app_list, sizeof(YM_Label *) * size);
-			app_list[size - 1] = (YM_Label *)malloc(sizeof(YM_Label));
-			app_list[size - 1] = ym_render_label(temp_str, 0, offset_y, context);
+			app_list = (char **)realloc(app_list, sizeof(char *) * size);
+			app_list[size - 1] = (char *)malloc(sizeof(char)* 254);
+            char temp_str[255] = {'\0'};
+            for (uint32_t i = 0; i < 254; i++) {
+                if (dirent_pointer->d_name[i] != '.') {
+                    temp_str[i] = dirent_pointer->d_name[i];
+                }else {
+                    break;
+                }
+            }
+			strcpy(app_list[size - 1], temp_str);
 		}
 	}
 	free(dirent_pointer);
@@ -537,16 +544,39 @@ void ym_cursor_point_to(YM_Element *cursor, float x, float y) {
 	cursor->transform.x -= diff.x * 0.2;
 	cursor->transform.y -= diff.y * 0.2;
 }
-void ym_draw_label_list(YM_Label_List *list, YM_Context *context) {
-	for (int32_t i = 0; i < list->size; i++) {
-		ym_draw_label(list->list[i], context);
-	}
+bool ym_search(YM_Label* label, const char* input) {
+    if (strstr(label->label_text, input)) {
+        return true;
+    }
+    return false;
+}
+bool ym_match(YM_Label* label, const char* input) {
+    if (strcmp(label->label_text, input) == false) {
+        return true;
+    }
+    return false;
+}
+void ym_draw_label_list(YM_String_List *str_list,YM_Label_List *list, YM_Context *context) {
+    if (strlen(input) == 0) {
+        uint32_t match_count = 0;
+        list->line_offset = 400;
+        for (uint32_t i = 0; i < str_list->size; i++) {
+            if (match_count < MAX_LABEL_COUNT) {
+                list->line_offset -= 50;
+                list->list[match_count] = *ym_render_label(str_list->list[i], 0, list->line_offset, context);
+                match_count++;
+            }
+        }
+    }
+    for (uint32_t i = 0; i < MAX_LABEL_COUNT; i++) {
+        ym_draw_label(&list->list[i], context);
+    }
 }
 int main(int argc, char **argv) {
 	YM_Window ym_window;
 	YM_Mouse mouse;
 	YM_Context context;
-
+    float labels_dynamic_loc[MAX_LABEL_COUNT];
 	ym_window = ym_create_window();
 
 	context.window = &ym_window;
@@ -575,7 +605,8 @@ int main(int argc, char **argv) {
 	YM_Element *input_text = ym_render_text(
 											input, 10, ym_window.height - (rect->scale.y / 2), &context);
 
-	YM_Label_List app_list;
+	YM_String_List app_list;
+    YM_Label_List labels;
 
 	app_list = ym_map_directory(&context);
 
@@ -588,6 +619,13 @@ int main(int argc, char **argv) {
 					(ym_window.height - cursor_block->scale.y) / 2);
 	ym_set_color_rgb(cursor_block, 0.0f, 0.87f, 1.0f);
 
+    labels.line_offset = 400;
+    
+    for (uint32_t i = 0; i < MAX_LABEL_COUNT; i++) {
+        labels.line_offset -= 50;
+        labels.list[i] = *ym_render_label(app_list.list[i], 0, labels.line_offset, &context);
+    }
+    
 	SDL_StartTextInput(ym_window.sdl_window);
 	bool is_typing = false;
 
@@ -616,11 +654,11 @@ int main(int argc, char **argv) {
 					}
 				}
 				if (event.key.key == SDLK_DOWN) {
-					if (cursor_index < app_list.size) {
+					if (cursor_index < MAX_LABEL_COUNT) {
 						cursor_target_x =
-							app_list.list[cursor_index]->text_element->last_glyph_x + cursor_block->scale.x;
+							labels.list[cursor_index].text_element->last_glyph_x + cursor_block->scale.x;
 						cursor_target_y =
-							app_list.list[cursor_index]->text_element->transform.y;
+						    labels.list[cursor_index].text_element->transform.y;
 						cursor_index++;
 					} else {
 						cursor_index = 0;
@@ -630,20 +668,31 @@ int main(int argc, char **argv) {
 					if (cursor_index != 0) {
 						cursor_index--;
 						cursor_target_x =
-							app_list.list[cursor_index]->text_element->last_glyph_x + cursor_block->scale.x;
+						    labels.list[cursor_index].text_element->last_glyph_x + cursor_block->scale.x;
 						cursor_target_y =
-							app_list.list[cursor_index]->text_element->transform.y;
+							labels.list[cursor_index].text_element->transform.y;
 					}
 				}
 				break;
-			case SDL_EVENT_TEXT_INPUT:
-				if (!is_typing && input_cursor < sizeof(input)) {
+			case SDL_EVENT_TEXT_INPUT:                
+				if (!is_typing && input_cursor < sizeof(input)) {                    
 					input[input_cursor++] = event.text.text[0];
 					cursor_target_x =
 						input_text->last_glyph_x + cursor_block->scale.x * 2.1;
 					cursor_target_y = input_text->transform.y - 2.6;
-					break;
-				}
+                    uint32_t match_count = 0;
+                    if (strlen(input) > 0 ) {
+                        labels.line_offset = 400;
+                        for (uint32_t i = 0; i < app_list.size; i++) {
+                            if (strstr(app_list.list[i] , input) && match_count < MAX_LABEL_COUNT) {
+                                labels.line_offset -= 50;
+                                labels.list[match_count] = *ym_render_label(app_list.list[i], 0, labels.line_offset, &context);
+                                match_count++;
+                            }
+                        }
+                    }
+                    break;
+                }
 			default:
 				mouse.left_button_down = false;
 				break;
@@ -659,7 +708,7 @@ int main(int argc, char **argv) {
 
 		ym_draw_element(rect, rect_shader, &context, YM_NO_BORDER);
 		ym_draw_text(input, &context, input_text);
-		ym_draw_label_list(&app_list, &context);
+		ym_draw_label_list(&app_list, &labels, &context);
 		ym_draw_element(cursor_block, cursor_block_shader, &context, YM_NO_BORDER);
 		ym_swap_buffers(&ym_window);
 	}
