@@ -19,6 +19,7 @@
 #include <string.h>
 #include FT_FREETYPE_H
 #include <dirent.h>
+#include <unistd.h>
 
 typedef struct {
 	const char *title;
@@ -501,11 +502,11 @@ YM_String_List ym_map_directory(YM_Context *context) {
 	struct dirent *dirent_pointer;
 
 #ifdef __linux__
-	directory = opendir("/usr/share/applications");
+    directory = opendir("/usr/bin/");
 #endif
 
 #ifdef __MINGW32__
-    directory = opendir("C:/ProgramData/Microsoft/Windows/Start Menu/Programs");
+    directory = opendir("C:/ProgramData/Microsoft/Windows/Start Menu/Programs/");
 #endif
     
 	char **app_list = (char **)malloc(sizeof(char *));
@@ -514,16 +515,16 @@ YM_String_List ym_map_directory(YM_Context *context) {
 	
 	while ((dirent_pointer = readdir(directory))) {
       if (strlen(dirent_pointer->d_name) > 0 && strcmp(dirent_pointer->d_name, "..")
-          && strcmp(dirent_pointer->d_name, ".") && strstr(dirent_pointer->d_name, ".desktop")) {
+          && strcmp(dirent_pointer->d_name, ".")) {
 			size++;
 			app_list = (char **)realloc(app_list, sizeof(char *) * size);
 			app_list[size - 1] = (char *)malloc(sizeof(char)* 254);
             char temp_str[255] = {'\0'};
             for (uint32_t i = 0; i < 254; i++) {
-                if (dirent_pointer->d_name[i] != '.') {
-                    temp_str[i] = dirent_pointer->d_name[i];
-                }else {
+                if (dirent_pointer->d_name[i] == '.' && dirent_pointer->d_name[i + 1] == 'd') {
                     break;
+                }else {
+                    temp_str[i] = dirent_pointer->d_name[i];
                 }
             }
 			strcpy(app_list[size - 1], temp_str);
@@ -572,6 +573,12 @@ void ym_draw_label_list(YM_String_List *str_list,YM_Label_List *list, YM_Context
         ym_draw_label(&list->list[i], context);
     }
 }
+void ym_execute_app(const char* name_str) {
+    char user_binary_path[255] = "/usr/bin/";    
+    char *arg[1];
+    strcat(user_binary_path, name_str); 
+    execvp(user_binary_path, arg);
+}
 int main(int argc, char **argv) {
 	YM_Window ym_window;
 	YM_Mouse mouse;
@@ -580,7 +587,7 @@ int main(int argc, char **argv) {
 	ym_window = ym_create_window();
 
 	context.window = &ym_window;
-
+    
 	ym_create_text_renderer(&context);
 
 	YM_Shader *rect_shader =
@@ -673,6 +680,11 @@ int main(int argc, char **argv) {
 							labels.list[cursor_index].text_element->transform.y;
 					}
 				}
+                if (event.key.key == SDLK_RETURN) {
+					if (cursor_index >= 0) {
+                        ym_execute_app(labels.list[cursor_index].label_text);
+					}
+				}
 				break;
 			case SDL_EVENT_TEXT_INPUT:                
 				if (!is_typing && input_cursor < sizeof(input)) {                    
@@ -712,7 +724,7 @@ int main(int argc, char **argv) {
 		ym_draw_element(cursor_block, cursor_block_shader, &context, YM_NO_BORDER);
 		ym_swap_buffers(&ym_window);
 	}
-
+    
 	ym_clean_up(&ym_window);
 	ym_destroy_list(&app_list);
 	return 0;
