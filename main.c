@@ -575,7 +575,7 @@ void ym_draw_label_list(YM_String_List *str_list,YM_Label_List *list, YM_Context
 }
 void ym_execute_app(const char* name_str) {
     char user_binary_path[255] = "/usr/bin/";    
-    char *arg[1];
+    char *arg[] = {};
     strcat(user_binary_path, name_str); 
     execvp(user_binary_path, arg);
 }
