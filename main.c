@@ -108,7 +108,7 @@ YM_Window ym_create_window() {
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-	SDL_SetHint(SDL_HINT_X11_WINDOW_TYPE, "_NET_WM_WINDOW_TYPE_DESKTOP");
+	SDL_SetHint(SDL_HINT_X11_WINDOW_TYPE, "_NET_WM_WINDOW_TYPE_DOCK");
 	tmp_window.sdl_window = SDL_CreateWindow(
 											 tmp_window.title, tmp_window.width, tmp_window.height, SDL_WINDOW_OPENGL);
 	if (!tmp_window.sdl_window) {
@@ -662,7 +662,7 @@ int main(int argc, char **argv) {
 					}
 				}
 				if (event.key.key == SDLK_DOWN) {
-					if (cursor_index < MAX_LABEL_COUNT) {
+					if (cursor_index < MAX_LABEL_COUNT - 1) {
                         cursor_index++;
 						cursor_target_x =
 							labels.list[cursor_index].text_element->last_glyph_x + cursor_block->scale.x;
