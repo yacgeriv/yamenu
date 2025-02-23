@@ -108,7 +108,7 @@ YM_Window ym_create_window() {
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-	// sdl_SetHint(SDL_HINT_X11_WINDOW_TYPE, "_NET_WM_WINDOW_TYPE_DESKTOP");
+	SDL_SetHint(SDL_HINT_X11_WINDOW_TYPE, "_NET_WM_WINDOW_TYPE_DESKTOP");
 	tmp_window.sdl_window = SDL_CreateWindow(
 											 tmp_window.title, tmp_window.width, tmp_window.height, SDL_WINDOW_OPENGL);
 	if (!tmp_window.sdl_window) {
@@ -575,8 +575,9 @@ void ym_draw_label_list(YM_String_List *str_list,YM_Label_List *list, YM_Context
 }
 void ym_execute_app(const char* name_str) {
     char user_binary_path[255] = "/usr/bin/";    
-    char *arg[] = {};
-    strcat(user_binary_path, name_str); 
+    char *arg[] = {(char*)name_str, 0};
+    strcat(user_binary_path, name_str);
+    
     execvp(user_binary_path, arg);
 }
 int main(int argc, char **argv) {
@@ -662,13 +663,17 @@ int main(int argc, char **argv) {
 				}
 				if (event.key.key == SDLK_DOWN) {
 					if (cursor_index < MAX_LABEL_COUNT) {
+                        cursor_index++;
 						cursor_target_x =
 							labels.list[cursor_index].text_element->last_glyph_x + cursor_block->scale.x;
 						cursor_target_y =
 						    labels.list[cursor_index].text_element->transform.y;
-						cursor_index++;
 					} else {
 						cursor_index = 0;
+                        cursor_target_x =
+							labels.list[cursor_index].text_element->last_glyph_x + cursor_block->scale.x;
+						cursor_target_y =
+						    labels.list[cursor_index].text_element->transform.y;
 					}
 				}
 				if (event.key.key == SDLK_UP) {
@@ -682,6 +687,9 @@ int main(int argc, char **argv) {
 				}
                 if (event.key.key == SDLK_RETURN) {
 					if (cursor_index >= 0) {
+                        printf("%d\n", cursor_index);
+                        ym_destroy_list(&app_list);
+                        ym_clean_up(&ym_window);
                         ym_execute_app(labels.list[cursor_index].label_text);
 					}
 				}
@@ -703,8 +711,10 @@ int main(int argc, char **argv) {
                             }
                         }
                     }
+                    cursor_index = 0;
                     break;
                 }
+                break;
 			default:
 				mouse.left_button_down = false;
 				break;
