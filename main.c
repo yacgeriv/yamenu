@@ -108,9 +108,10 @@ YM_Window ym_create_window() {
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-	SDL_SetHint(SDL_HINT_X11_WINDOW_TYPE, "_NET_WM_WINDOW_TYPE_DOCK");
+    // SDL_SetHint(SDL_HINT_X11_WINDOW_TYPE, "_NET_WM_WINDOW_TYPE_DOCK");
 	tmp_window.sdl_window = SDL_CreateWindow(
-											 tmp_window.title, tmp_window.width, tmp_window.height, SDL_WINDOW_OPENGL);
+											 tmp_window.title, tmp_window.width, tmp_window.height,
+                                             SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS | SDL_WINDOW_ALWAYS_ON_TOP);
 	if (!tmp_window.sdl_window) {
 		fprintf(stderr, "SDL window failed to initialise: %s\n", SDL_GetError());
 	}
@@ -603,8 +604,6 @@ int main(int argc, char **argv) {
 
 	SDL_Event event;
 
-	// NOTE:------input area-------
-
 	ym_set_scale(rect, ym_window.width, 50);
 	ym_set_position(rect, 0, ym_window.height - rect->scale.y);
 	ym_set_color_rgb(rect, (float)0x20 / 255, (float)0x20 / 255,
@@ -638,6 +637,7 @@ int main(int argc, char **argv) {
 	bool is_typing = false;
 
 	while (ym_window.running) {
+        SDL_SetWindowKeyboardGrab(ym_window.sdl_window, true);
 		while (SDL_PollEvent(&event)) {
 			switch (event.type) {
 			case SDL_EVENT_QUIT:
