@@ -300,7 +300,7 @@ bool ym_check_mouse_intersection(YM_Mouse mouse, YM_Element element) {
 			return true;
 		}
 	}
- return false;
+    return false;
 }
 bool ym_check_mouse_click(YM_Mouse *mouse, YM_Element *element) {
 	if (ym_check_mouse_intersection(*mouse, *element) &&
@@ -515,8 +515,8 @@ YM_String_List ym_map_directory(YM_Context *context) {
 	size_t size = 0;
 	
 	while ((dirent_pointer = readdir(directory))) {
-      if (strlen(dirent_pointer->d_name) > 0 && strcmp(dirent_pointer->d_name, "..")
-          && strcmp(dirent_pointer->d_name, ".")) {
+        if (strlen(dirent_pointer->d_name) > 0 && strcmp(dirent_pointer->d_name, "..")
+            && strcmp(dirent_pointer->d_name, ".")) {
 			size++;
 			app_list = (char **)realloc(app_list, sizeof(char *) * size);
 			app_list[size - 1] = (char *)malloc(sizeof(char)* 254);
