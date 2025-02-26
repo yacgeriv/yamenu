@@ -108,10 +108,11 @@ YM_Window ym_create_window() {
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-    // SDL_SetHint(SDL_HINT_X11_WINDOW_TYPE, "_NET_WM_WINDOW_TYPE_DOCK");
+
+    //    SDL_SetHint(SDL_HINT_X11_WINDOW_TYPE, "_NET_WM_WINDOW_TYPE_DOCK");
 	tmp_window.sdl_window = SDL_CreateWindow(
 											 tmp_window.title, tmp_window.width, tmp_window.height,
-                                             SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS | SDL_WINDOW_ALWAYS_ON_TOP);
+                                             SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS);
 	if (!tmp_window.sdl_window) {
 		fprintf(stderr, "SDL window failed to initialise: %s\n", SDL_GetError());
 	}
@@ -125,7 +126,6 @@ YM_Window ym_create_window() {
 		perror("failed to load glad");
 	}
 
-	// glEnable(GL_CULL_FACE);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -559,17 +559,6 @@ bool ym_match(YM_Label* label, const char* input) {
     return false;
 }
 void ym_draw_label_list(YM_String_List *str_list,YM_Label_List *list, YM_Context *context) {
-    if (strlen(input) == 0) {
-        uint32_t match_count = 0;
-        list->line_offset = 400;
-        for (uint32_t i = 0; i < str_list->size; i++) {
-            if (match_count < MAX_LABEL_COUNT) {
-                list->line_offset -= 50;
-                list->list[match_count] = *ym_render_label(str_list->list[i], 0, list->line_offset, context);
-                match_count++;
-            }
-        }
-    }
     for (uint32_t i = 0; i < MAX_LABEL_COUNT; i++) {
         ym_draw_label(&list->list[i], context);
     }
@@ -594,7 +583,6 @@ int main(int argc, char **argv) {
 
 	YM_Shader *rect_shader =
 		ym_create_shader("build/vertex.glsl", "build/fragment.glsl");
-
 	YM_Element *rect = ym_render_rectangle();
 
 	ym_window.running = true;
@@ -693,6 +681,10 @@ int main(int argc, char **argv) {
                         ym_execute_app(labels.list[cursor_index].label_text);
 					}
 				}
+                if (event.key.key == SDLK_ESCAPE) {
+                    ym_destroy_list(&app_list);
+                    ym_clean_up(&ym_window);
+                }
 				break;
 			case SDL_EVENT_TEXT_INPUT:                
 				if (!is_typing && input_cursor < sizeof(input)) {                    
