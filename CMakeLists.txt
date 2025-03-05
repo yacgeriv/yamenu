@@ -36,3 +36,4 @@ target_include_directories(yamenu PRIVATE vendor/glad/glad/include)
 target_include_directories(yamenu PRIVATE vendor/SDL/include)
 target_link_directories(yamenu PRIVATE vendor/SDL/build/)
 
+target_include_directories(yamenu PRIVATE vendor/stb/)

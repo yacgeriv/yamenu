@@ -3,3 +3,4 @@ build/*
 .cache
 .clangd
 compile_commands.json
+demo.bmp

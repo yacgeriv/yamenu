@@ -17,9 +17,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include FT_FREETYPE_H
+#include <freetype/freetype.h>
 #include <dirent.h>
 #include <unistd.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 typedef struct {
 	const char *title;
@@ -46,7 +48,7 @@ typedef struct {
 	mat4 model;
 	float last_glyph_x;
 	float glyph_size;
- 
+    unsigned int texture;
 } YM_Element;
 
 typedef struct {
@@ -54,6 +56,7 @@ typedef struct {
 	float screen_x, screen_y;
     bool left_button_down;
 } YM_Mouse;
+
 typedef struct {
 	unsigned int texture_id;
 	vec2s size;
@@ -61,11 +64,13 @@ typedef struct {
 	unsigned int advance;
 	char ascii;
 } YM_Glyph;
+
 typedef struct {
 	YM_Glyph characters[128];
 	mat4 projection;
 	YM_Window *window;
 } YM_Context;
+
 typedef struct {
 	char label_text[255];
 	float bg_pos_x, bg_pos_y;
@@ -74,17 +79,32 @@ typedef struct {
 	YM_Element *text_element;
 	YM_Shader bg_shader, text_shader;
 } YM_Label;
+
 typedef struct {
 	size_t size;
 	char **list;
 } YM_String_List;
+
 typedef struct {
 	size_t size;
 	YM_Label list[6];
     float line_offset;
 } YM_Label_List;
 
-enum YM_Border_Style { YM_BORDER, YM_NO_BORDER };
+typedef struct {
+    float r,g,b,a;
+} YM_RGBA;
+
+enum YM_Border_Style {
+    YM_BORDER,
+    YM_NO_BORDER,
+};
+
+const YM_RGBA BACKGROUND_COLOR = {(float) 0x20 / 255, (float) 0x20 / 255, (float) 0x20 / 255, (float) 0x20 / 255};
+const YM_RGBA LABELTEXT_NORMAL_COLOR = {(float)0x39 / 255, (float)0x206 / 255, (float)0x64 / 255, 1.0f};
+const YM_RGBA LABELBG_COLOR = {(float)0x34 / 255, (float)0x20 / 255, (float)0x20 / 255, 1.0f};
+const YM_RGBA CURSOR_COLOR = {0.0f, 0.87f, 1.0f, 1.0f};
+const YM_RGBA LABELTEXT_HOVER_COLOR = {0.0f, 0.87f, 1.0f, 1.0};
 
 char input[528];
 uint32_t input_cursor = 0;
@@ -108,8 +128,6 @@ YM_Window ym_create_window() {
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-
-    //    SDL_SetHint(SDL_HINT_X11_WINDOW_TYPE, "_NET_WM_WINDOW_TYPE_DOCK");
 	tmp_window.sdl_window = SDL_CreateWindow(
 											 tmp_window.title, tmp_window.width, tmp_window.height,
                                              SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS);
@@ -228,15 +246,17 @@ YM_Shader *ym_create_shader(const char *vertex_path,
 
 	return shader;
 }
-void ym_use_shader(YM_Shader *shader) { glUseProgram(shader->program); }
-YM_Element *ym_render_rectangle() {
+void ym_use_shader(YM_Shader *shader) {
+    glUseProgram(shader->program);
+}
+YM_Element *ym_render_rectangle(bool is_textured) {
 	YM_Element *element;
 	element = (YM_Element *)malloc(sizeof(YM_Element));
 
 	const float vertices[] = {
 		0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-
-		0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f};
+		0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f
+    };
 
 	glGenVertexArrays(1, &element->vao);
 
@@ -263,6 +283,23 @@ YM_Element *ym_render_rectangle() {
 	element->color.z = 0.0f;
 	element->color.w = 1.0f;
 
+    if (is_textured) {
+        int width, height, nrChannels;
+        stbi_set_flip_vertically_on_load(true);
+        unsigned char *data = stbi_load("demo.bmp", &width, &height, &nrChannels, 0);
+        
+        glGenTextures(1, &element->texture);
+        glBindTexture(GL_TEXTURE_2D, element->texture);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        stbi_image_free(data);
+    }
+    
 	return element;
 }
 void ym_draw_element(YM_Element *element, YM_Shader *shader,
@@ -284,6 +321,11 @@ void ym_draw_element(YM_Element *element, YM_Shader *shader,
 	if (border == YM_BORDER) {
 		// TODO :: add border
 	}
+
+    if (element->texture != NULL) {
+        glBindTexture(GL_TEXTURE_2D, element->texture);
+        glUniform1i(glGetUniformLocation(shader->program, "tex"), 0);
+    }
 
 	glBindVertexArray(element->vao);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -417,11 +459,11 @@ void ym_set_position(YM_Element *element, float x, float y) {
 	element->transform.x = x;
 	element->transform.y = y;
 }
-void ym_set_color_rgb(YM_Element *element, float r, float g, float b) {
-	element->color.x = r;
-	element->color.y = g;
-	element->color.z = b;
-	element->color.w = 1.0f;
+void ym_set_color_rgba(YM_Element *element, YM_RGBA color) {
+	element->color.x = color.r;
+	element->color.y = color.g;
+	element->color.z = color.b;
+	element->color.w = color.a;
 }
 void ym_set_scale(YM_Element *element, float x, float y) {
 	element->scale.x = x;
@@ -445,8 +487,7 @@ YM_Element *ym_render_text(const char *text, float x, float y,
 
 	ym_set_scale(element, 0.5, 0.5);
 	ym_set_position(element, element->transform.x, element->transform.y);
-	ym_set_color_rgb(element, (float)0x39 / 255, (float)0x206 / 255,
-					 (float)0x64 / 255);
+	ym_set_color_rgba(element, LABELTEXT_NORMAL_COLOR);
 
 	glGenVertexArrays(1, &element->vao);
 	glGenBuffers(1, &element->vbo);
@@ -472,12 +513,11 @@ YM_Label *ym_render_label(const char *label_txt, float x, float y,
 
 	strncpy(label->label_text, label_txt, 254);
 
-	label->bg_element = ym_render_rectangle();
+	label->bg_element = ym_render_rectangle(false);
 
 	ym_set_scale(label->bg_element, context->window->width, 40.0f);
 	ym_set_position(label->bg_element, x, y);
-	ym_set_color_rgb(label->bg_element, (float)0x34 / 255, (float)0x20 / 255,
-					 (float)0x20 / 255);
+	ym_set_color_rgba(label->bg_element, LABELBG_COLOR);
 
 	label->bg_shader =
 		*ym_create_shader("build/vertex.glsl", "build/fragment.glsl");
@@ -583,7 +623,7 @@ int main(int argc, char **argv) {
 
 	YM_Shader *rect_shader =
 		ym_create_shader("build/vertex.glsl", "build/fragment.glsl");
-	YM_Element *rect = ym_render_rectangle();
+	YM_Element *rect = ym_render_rectangle(false);
 
 	ym_window.running = true;
 
@@ -594,8 +634,7 @@ int main(int argc, char **argv) {
 
 	ym_set_scale(rect, ym_window.width, 50);
 	ym_set_position(rect, 0, ym_window.height - rect->scale.y);
-	ym_set_color_rgb(rect, (float)0x20 / 255, (float)0x20 / 255,
-					 (float)0x20 / 255);
+	ym_set_color_rgba(rect, BACKGROUND_COLOR);
 
 	YM_Element *input_text = ym_render_text(
 											input, 10, ym_window.height - (rect->scale.y / 2), &context);
@@ -605,23 +644,31 @@ int main(int argc, char **argv) {
 
 	app_list = ym_map_directory(&context);
 
+	YM_Shader *banner_shader =
+		ym_create_shader("build/vertex.glsl", "textured_f.glsl");
+	YM_Element *banner = ym_render_rectangle(true);
+    
+	ym_set_scale(banner, ym_window.width, 120);
+	ym_set_position(banner, 0, ym_window.height - 160);
+    
 	YM_Shader *cursor_block_shader =
 		ym_create_shader("build/vertex.glsl", "build/fragment.glsl");
-	YM_Element *cursor_block = ym_render_rectangle();
+	YM_Element *cursor_block = ym_render_rectangle(false);
 
 	ym_set_scale(cursor_block, 15, 25);
 	ym_set_position(cursor_block, (ym_window.width - cursor_block->scale.x) / 2.2,
 					(ym_window.height - cursor_block->scale.y) / 2);
-	ym_set_color_rgb(cursor_block, 0.0f, 0.87f, 1.0f);
+	ym_set_color_rgba(cursor_block, CURSOR_COLOR);
 
-    labels.line_offset = 400;
+    labels.line_offset = 340;
     
     for (uint32_t i = 0; i < MAX_LABEL_COUNT; i++) {
         labels.line_offset -= 50;
         labels.list[i] = *ym_render_label(app_list.list[i], 0, labels.line_offset, &context);
     }
-    
-	SDL_StartTextInput(ym_window.sdl_window);
+    labels.line_offset = 340;
+
+    SDL_StartTextInput(ym_window.sdl_window);
 	bool is_typing = false;
 
 	while (ym_window.running) {
@@ -684,6 +731,7 @@ int main(int argc, char **argv) {
                 if (event.key.key == SDLK_ESCAPE) {
                     ym_destroy_list(&app_list);
                     ym_clean_up(&ym_window);
+                    return 0;
                 }
 				break;
 			case SDL_EVENT_TEXT_INPUT:                
@@ -694,7 +742,7 @@ int main(int argc, char **argv) {
 					cursor_target_y = input_text->transform.y - 2.6;
                     uint32_t match_count = 0;
                     if (strlen(input) > 0 ) {
-                        labels.line_offset = 400;
+                        labels.line_offset = 340;
                         for (uint32_t i = 0; i < app_list.size; i++) {
                             if (strstr(app_list.list[i] , input) && match_count < MAX_LABEL_COUNT) {
                                 labels.line_offset -= 50;
@@ -712,18 +760,32 @@ int main(int argc, char **argv) {
 				break;
 			}
 		}
-
+        
+        for (uint32_t i = 0; i < MAX_LABEL_COUNT - 1; i++) {
+            if (ym_check_mouse_intersection(mouse, *labels.list[i].bg_element)) {
+                ym_set_color_rgba(labels.list[i].text_element, LABELTEXT_HOVER_COLOR);
+            }else{
+                ym_set_color_rgba(labels.list[i].text_element, LABELTEXT_NORMAL_COLOR);
+            }
+            if (ym_check_mouse_click(&mouse, labels.list[i].bg_element)) {
+                ym_destroy_list(&app_list);
+                ym_clean_up(&ym_window);
+                ym_execute_app(labels.list[i].label_text);
+            }
+        }
+        
 		ym_cursor_point_to(cursor_block, cursor_target_x, cursor_target_y);
 
 		glViewport(0, 0, ym_window.width, ym_window.height);
-		glClearColor((float)0x20 / 255, (float)0x20 / 255, (float)0x20 / 255,
-					 (float)0x20 / 255);
+		glClearColor(BACKGROUND_COLOR.r, BACKGROUND_COLOR.g, BACKGROUND_COLOR.b, BACKGROUND_COLOR.a);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		ym_draw_element(rect, rect_shader, &context, YM_NO_BORDER);
-		ym_draw_text(input, &context, input_text);
-		ym_draw_label_list(&app_list, &labels, &context);
-		ym_draw_element(cursor_block, cursor_block_shader, &context, YM_NO_BORDER);
+        ym_draw_text(input, &context, input_text);
+        ym_draw_label_list(&app_list, &labels, &context);
+        ym_draw_element(banner, banner_shader, &context, YM_NO_BORDER);
+        ym_draw_element(cursor_block, cursor_block_shader, &context, YM_NO_BORDER);
+        
 		ym_swap_buffers(&ym_window);
 	}
     
