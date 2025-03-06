@@ -16,7 +16,7 @@ if(EXISTS "vendor/SDL/build/SDL3.dll")
 endif()
 project(yamenu)
 
-add_executable(yamenu main.c ${SRC_FILES})
+add_executable(yamenu main.c src/yamenu.c ${SRC_FILES})
 if(WIN32)
     target_link_libraries(yamenu PRIVATE libSDL3.dll.a libcglm.dll.a m libfreetype.dll.a)
 else()
@@ -35,5 +35,7 @@ target_include_directories(yamenu PRIVATE vendor/glad/glad/include)
 
 target_include_directories(yamenu PRIVATE vendor/SDL/include)
 target_link_directories(yamenu PRIVATE vendor/SDL/build/)
+
+target_include_directories(yamenu PRIVATE include/)
 
 target_include_directories(yamenu PRIVATE vendor/stb/)
