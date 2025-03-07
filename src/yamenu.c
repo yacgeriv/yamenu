@@ -1,5 +1,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "yamenu.h"
+#include "shaders.h"
 
 YM_Window ym_create_window() {
 	YM_Window tmp_window;
@@ -80,16 +81,14 @@ void ym_destroy_labels(YM_Label_List *labels, size_t label_count) {
         free(labels->list[i].text_element->shader);
     }
 }
-YM_Shader *ym_create_shader(const char *vertex_path,
-                            const char *fragment_path) {
-	const char *vertex_shader_data = ym_read_shader_file(vertex_path);
-	const char *fragment_shader_data = ym_read_shader_file(fragment_path);
+YM_Shader *ym_create_shader(const char *vertex,
+                            const char *fragment) {
 
 	YM_Shader *shader;
 	shader = (YM_Shader *)malloc(sizeof(YM_Shader));
 
 	shader->vertex = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(shader->vertex, 1, &vertex_shader_data, NULL);
+	glShaderSource(shader->vertex, 1, &vertex, NULL);
 	glCompileShader(shader->vertex);
 
 	int success;
@@ -101,7 +100,7 @@ YM_Shader *ym_create_shader(const char *vertex_path,
 	}
 
 	shader->fragment = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(shader->fragment, 1, &fragment_shader_data, NULL);
+	glShaderSource(shader->fragment, 1, &fragment, NULL);
 	glCompileShader(shader->fragment);
 
 	glGetShaderiv(shader->fragment, GL_COMPILE_STATUS, &success);
@@ -365,7 +364,7 @@ YM_Element *ym_render_text(const char *text, float x, float y,
 	element->transform.x = x;
 	element->transform.y = y;
 
-	element->shader = ym_create_shader("glyph_v.glsl", "glyph_f.glsl");
+	element->shader = ym_create_shader(GLYPH_V_SHADER, GLYPH_F_SHADER);
 
 	ym_set_scale(element, 0.5, 0.5);
 	ym_set_position(element, element->transform.x, element->transform.y);
@@ -402,7 +401,7 @@ YM_Label *ym_render_label(const char *label_txt, float x, float y,
 	ym_set_color_rgba(label->bg_element, bg_color);
 
 	label->bg_shader =
-		ym_create_shader("build/vertex.glsl", "build/fragment.glsl");
+		ym_create_shader(VERTEX_SHADER, FRAGMENT_SHADER);
 	label->text_element =
 		ym_render_text(label_txt, label->bg_element->transform.x + text_offset,
 					   label->bg_element->transform.y, context, text_color);

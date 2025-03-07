@@ -9,8 +9,6 @@ if(EXISTS "build/compile_commands.json")
     file(COPY build/compile_commands.json DESTINATION ${CMAKE_SOURCE_DIR})
 endif()
 
-file(COPY vertex.glsl DESTINATION ${CMAKE_SOURCE_DIR}/build)
-file(COPY fragment.glsl DESTINATION ${CMAKE_SOURCE_DIR}/build)
 if(EXISTS "vendor/SDL/build/SDL3.dll") 
     file(COPY vendor/SDL/build/SDL3.dll DESTINATION ${CMAKE_SOURCE_DIR}/build)
 endif()

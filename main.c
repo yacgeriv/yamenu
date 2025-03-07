@@ -1,4 +1,7 @@
 #include "yamenu.h"
+#include <unistd.h>
+#define SHADERS_IMPL
+#include "shaders.h"
 
 const YM_RGBA BACKGROUND_COLOR = {(float) 0x20 / 255, (float) 0x20 / 255, (float) 0x20 / 255, (float) 0x20 / 255};
 const YM_RGBA LABELTEXT_NORMAL_COLOR = {(float)0x39 / 255, (float)0x206 / 255, (float)0x64 / 255, 1.0f};
@@ -26,11 +29,10 @@ int main(int argc, char **argv) {
 	context.window = &ym_window;
     
 	ym_create_text_renderer(&context);
-
 	YM_Shader *rect_shader =
-		ym_create_shader("build/vertex.glsl", "build/fragment.glsl");
+		ym_create_shader(VERTEX_SHADER, FRAGMENT_SHADER);
+   
 	YM_Element *rect = ym_render_rectangle(false, "");
-
 	ym_window.running = true;
 
 	glm_ortho(0.0, ym_window.width, 0.0, ym_window.height, -2.0, 1.0f,
@@ -50,14 +52,14 @@ int main(int argc, char **argv) {
 	app_list = ym_map_directory(&context);
 
 	YM_Shader *banner_shader =
-		ym_create_shader("build/vertex.glsl", "textured_f.glsl");
+		ym_create_shader(VERTEX_SHADER, TEXTURE_F_SHADER);
 	YM_Element *banner = ym_render_rectangle(true, BANNER_BG);
     
 	ym_set_scale(banner, ym_window.width, 120);
 	ym_set_position(banner, 0, ym_window.height - 160);
     
 	YM_Shader *cursor_block_shader =
-		ym_create_shader("build/vertex.glsl", "build/fragment.glsl");
+		ym_create_shader(VERTEX_SHADER, FRAGMENT_SHADER);
 	YM_Element *cursor_block = ym_render_rectangle(false, "");
 
 	ym_set_scale(cursor_block, 15, 25);

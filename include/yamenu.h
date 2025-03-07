@@ -114,7 +114,7 @@ void ym_free_element(YM_Element *element);
 
 void ym_destroy_labels(YM_Label_List *labels, size_t label_count);
 
-YM_Shader *ym_create_shader(const char *vertex_path, const char *fragment_path);
+YM_Shader *ym_create_shader(const char *vertex, const char *fragment);
 
 void ym_use_shader(YM_Shader *shader);
 
