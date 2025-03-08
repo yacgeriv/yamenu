@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
 
 	SDL_StartTextInput(ym_window.sdl_window);
 	bool is_typing = false;
-
+	cursor_target_y = 500 - cursor_block->scale.y;
 	while (ym_window.running) {
 		SDL_SetWindowKeyboardGrab(ym_window.sdl_window, true);
 		while (SDL_PollEvent(&event)) {
