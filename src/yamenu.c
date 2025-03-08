@@ -17,8 +17,8 @@ YM_Window ym_create_window() {
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
 	tmp_window.sdl_window = SDL_CreateWindow(
-											 tmp_window.title, tmp_window.width, tmp_window.height,
-                                             SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS);
+		tmp_window.title, tmp_window.width, tmp_window.height,
+		SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS);
 	if (!tmp_window.sdl_window) {
 		fprintf(stderr, "SDL window failed to initialise: %s\n", SDL_GetError());
 	}
@@ -73,13 +73,13 @@ void ym_clean_up(YM_Window *window) {
 	SDL_Quit();
 }
 void ym_free_element(YM_Element *element) {
-    free(element);
+	free(element);
 }
 void ym_destroy_labels(YM_Label_List *labels, size_t label_count) {
-    for (uint32_t i = 0; i < label_count; i++) {
-        free(labels->list[i].bg_shader);
-        free(labels->list[i].text_element->shader);
-    }
+	for (uint32_t i = 0; i < label_count; i++) {
+		free(labels->list[i].bg_shader);
+		free(labels->list[i].text_element->shader);
+	}
 }
 YM_Shader *ym_create_shader(const char *vertex,
                             const char *fragment) {
@@ -126,7 +126,7 @@ YM_Shader *ym_create_shader(const char *vertex,
 	return shader;
 }
 void ym_use_shader(YM_Shader *shader) {
-    glUseProgram(shader->program);
+	glUseProgram(shader->program);
 }
 YM_Element *ym_render_rectangle(bool is_textured, const char *texture_path) {
 	YM_Element *element;
@@ -135,7 +135,7 @@ YM_Element *ym_render_rectangle(bool is_textured, const char *texture_path) {
 	const float vertices[] = {
 		0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f
-    };
+	};
 
 	glGenVertexArrays(1, &element->vao);
 
@@ -162,22 +162,22 @@ YM_Element *ym_render_rectangle(bool is_textured, const char *texture_path) {
 	element->color.z = 0.0f;
 	element->color.w = 1.0f;
 
-    if (is_textured && strlen(texture_path) > 0) {
-        int width, height, nrChannels;
-        stbi_set_flip_vertically_on_load(true);
-        unsigned char *data = stbi_load(texture_path, &width, &height, &nrChannels, 0);
+	if (is_textured && strlen(texture_path) > 0) {
+		int width, height, nrChannels;
+		stbi_set_flip_vertically_on_load(true);
+		unsigned char *data = stbi_load(texture_path, &width, &height, &nrChannels, 0);
         
-        glGenTextures(1, &element->texture);
-        glBindTexture(GL_TEXTURE_2D, element->texture);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP);
-        glGenerateMipmap(GL_TEXTURE_2D);
-        stbi_image_free(data);
-    }
+		glGenTextures(1, &element->texture);
+		glBindTexture(GL_TEXTURE_2D, element->texture);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP);
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP);
+		glGenerateMipmap(GL_TEXTURE_2D);
+		stbi_image_free(data);
+	}
     
 	return element;
 }
@@ -190,44 +190,44 @@ void ym_draw_element(YM_Element *element, YM_Shader *shader,
 
 	ym_use_shader(shader);
 	glUniformMatrix4fv(glGetUniformLocation(shader->program, "model"), 1,
-					   GL_FALSE, element->model[0]);
+			   GL_FALSE, element->model[0]);
 	glUniformMatrix4fv(glGetUniformLocation(shader->program, "projection"), 1,
-					   GL_FALSE, context->projection[0]);
+			   GL_FALSE, context->projection[0]);
 	glUniform4fv(glGetUniformLocation(shader->program, "color"), 1,
-				 element->color.raw);
+		     element->color.raw);
 	glUniform1f(glGetUniformLocation(shader->program, "time"),
-				SDL_GetTicks() * 0.0002);
+		    SDL_GetTicks() * 0.0002);
 	if (border == YM_BORDER) {
 		// TODO :: add border
 	}
 
-    if (element->texture != 0) {
-        glBindTexture(GL_TEXTURE_2D, element->texture);
-        glUniform1i(glGetUniformLocation(shader->program, "tex"), 0);
-    }
+	if (element->texture != 0) {
+		glBindTexture(GL_TEXTURE_2D, element->texture);
+		glUniform1i(glGetUniformLocation(shader->program, "tex"), 0);
+	}
 
 	glBindVertexArray(element->vao);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glBindVertexArray(0);
 }
 float ym_convert_mouse_y(YM_Mouse *mouse) {
-    return -mouse->y + 500;
+	return -mouse->y + 500;
 }
 bool ym_check_mouse_intersection(YM_Mouse mouse, YM_Element element) {
 	float mouse_y = ym_convert_mouse_y(&mouse);
 
 	if (mouse.x > element.transform.x &&
-		mouse.x < element.transform.x + (element.scale.x)) {
+	    mouse.x < element.transform.x + (element.scale.x)) {
 		if (mouse_y > element.transform.y &&
-			mouse_y < element.transform.y + (element.scale.y)) {
+		    mouse_y < element.transform.y + (element.scale.y)) {
 			return true;
 		}
 	}
-    return false;
+	return false;
 }
 bool ym_check_mouse_click(YM_Mouse *mouse, YM_Element *element) {
 	if (ym_check_mouse_intersection(*mouse, *element) &&
-		mouse->left_button_down) {
+	    mouse->left_button_down) {
 		printf("mouse clicked on element\n");
 		mouse->left_button_down = false;
 		return true;
@@ -259,8 +259,8 @@ void ym_create_text_renderer(YM_Context *context) {
 		glGenTextures(1, &texture);
 		glBindTexture(GL_TEXTURE_2D, texture);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, font_face->glyph->bitmap.width,
-					 font_face->glyph->bitmap.rows, 0, GL_RED, GL_UNSIGNED_BYTE,
-					 font_face->glyph->bitmap.buffer);
+			     font_face->glyph->bitmap.rows, 0, GL_RED, GL_UNSIGNED_BYTE,
+			     font_face->glyph->bitmap.buffer);
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -290,10 +290,10 @@ void ym_draw_text(const char *text, YM_Context *context, YM_Element *element) {
 	glUseProgram(element->shader->program);
 
 	glUniform4fv(glGetUniformLocation(element->shader->program, "color"), 1,
-				 element->color.raw);
+		     element->color.raw);
 	glUniformMatrix4fv(
-					   glGetUniformLocation(element->shader->program, "projection"), 1, GL_FALSE,
-					   context->projection[0]);
+		glGetUniformLocation(element->shader->program, "projection"), 1, GL_FALSE,
+		context->projection[0]);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindVertexArray(element->vao);
@@ -352,7 +352,7 @@ void ym_set_scale(YM_Element *element, float x, float y) {
 }
 void ym_destroy_list(YM_String_List *list) {
 	for (uint32_t i = 0; i < list->size; i++) {
-        free(list->list[i]);
+		free(list->list[i]);
 	}
 	free(list->list);
 }
@@ -404,11 +404,11 @@ YM_Label *ym_render_label(const char *label_txt, float x, float y,
 		ym_create_shader(VERTEX_SHADER, FRAGMENT_SHADER);
 	label->text_element =
 		ym_render_text(label_txt, label->bg_element->transform.x + text_offset,
-					   label->bg_element->transform.y, context, text_color);
+			       label->bg_element->transform.y, context, text_color);
 
 	ym_set_position(label->text_element, label->text_element->transform.x,
-					label->bg_element->transform.y -
-					(label->text_element->glyph_size) / 2);
+			label->bg_element->transform.y -
+			(label->text_element->glyph_size) / 2);
 
 	return label;
 }
@@ -419,16 +419,16 @@ void ym_draw_label(YM_Label *label, YM_Context *context) {
 YM_String_List ym_map_directory(YM_Context *context) {
 	YM_String_List list;
 
-    DIR *directory;
+	DIR *directory;
 
 	struct dirent *dirent_pointer;
 
 #ifdef __linux__
-    directory = opendir("/usr/bin/");
+	directory = opendir("/usr/bin/");
 #endif
 
 #ifdef __MINGW32__
-    directory = opendir("C:/ProgramData/Microsoft/Windows/Start Menu/Programs/");
+	directory = opendir("C:/ProgramData/Microsoft/Windows/Start Menu/Programs/");
 #endif
     
 	char **app_list = (char **)malloc(sizeof(char *));
@@ -436,19 +436,19 @@ YM_String_List ym_map_directory(YM_Context *context) {
 	size_t size = 0;
 	
 	while ((dirent_pointer = readdir(directory))) {
-        if (strlen(dirent_pointer->d_name) > 0 && strcmp(dirent_pointer->d_name, "..")
-            && strcmp(dirent_pointer->d_name, ".")) {
+		if (strlen(dirent_pointer->d_name) > 0 && strcmp(dirent_pointer->d_name, "..")
+		    && strcmp(dirent_pointer->d_name, ".")) {
 			size++;
 			app_list = (char **)realloc(app_list, sizeof(char *) * size);
 			app_list[size - 1] = (char *)malloc(sizeof(char)* 254);
-            char temp_str[255] = {'\0'};
-            for (uint32_t i = 0; i < 254; i++) {
-                if (dirent_pointer->d_name[i] == '.' && dirent_pointer->d_name[i + 1] == 'd') {
-                    break;
-                }else {
-                    temp_str[i] = dirent_pointer->d_name[i];
-                }
-            }
+			char temp_str[255] = {'\0'};
+			for (uint32_t i = 0; i < 254; i++) {
+				if (dirent_pointer->d_name[i] == '.' && dirent_pointer->d_name[i + 1] == 'd') {
+					break;
+				}else {
+					temp_str[i] = dirent_pointer->d_name[i];
+				}
+			}
 			strcpy(app_list[size - 1], temp_str);
 		}
 	}
@@ -468,26 +468,26 @@ void ym_cursor_point_to(YM_Element *cursor, float x, float y) {
 	cursor->transform.y -= diff.y * 0.2;
 }
 bool ym_search(YM_Label* label, const char* input) {
-    if (strstr(label->label_text, input)) {
-        return true;
-    }
-    return false;
+	if (strstr(label->label_text, input)) {
+		return true;
+	}
+	return false;
 }
 bool ym_match(YM_Label* label, const char* input) {
-    if (strcmp(label->label_text, input) == false) {
-        return true;
-    }
-    return false;
+	if (strcmp(label->label_text, input) == false) {
+		return true;
+	}
+	return false;
 }
 void ym_draw_label_list(YM_String_List *str_list,YM_Label_List *list, YM_Context *context, size_t nof_labels) {
-    for (uint32_t i = 0; i < nof_labels; i++) {
-        ym_draw_label(&list->list[i], context);
-    }
+	for (uint32_t i = 0; i < nof_labels; i++) {
+		ym_draw_label(&list->list[i], context);
+	}
 }
 void ym_execute_app(const char* name_str) {
-    char user_binary_path[255] = "/usr/bin/";    
-    char *arg[] = {(char*)name_str, 0};
-    strcat(user_binary_path, name_str);
+	char user_binary_path[255] = "/usr/bin/";    
+	char *arg[] = {(char*)name_str, 0};
+	strcat(user_binary_path, name_str);
     
-    execvp(user_binary_path, arg);
+	execvp(user_binary_path, arg);
 }
