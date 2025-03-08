@@ -28,7 +28,7 @@
 typedef struct {
 	const char *title;
 	uint32_t width;
-    uint32_t height;
+	uint32_t height;
 	bool running;
 	SDL_Window *sdl_window;
 	SDL_GLContext gl_context;
@@ -50,13 +50,13 @@ typedef struct {
 	mat4 model;
 	float last_glyph_x;
 	float glyph_size;
-    unsigned int texture;
+	unsigned int texture;
 } YM_Element;
 
 typedef struct {
 	float x, y;
 	float screen_x, screen_y;
-    bool left_button_down;
+	bool left_button_down;
 } YM_Mouse;
 
 typedef struct {
@@ -90,16 +90,16 @@ typedef struct {
 typedef struct {
 	size_t size;
 	YM_Label list[6];
-    float line_offset;
+	float line_offset;
 } YM_Label_List;
 
 typedef struct {
-    float r,g,b,a;
+	float r,g,b,a;
 } YM_RGBA;
 
 enum YM_Border_Style {
-    YM_BORDER,
-    YM_NO_BORDER,
+	YM_BORDER,
+	YM_NO_BORDER,
 };
 
 YM_Window ym_create_window();
