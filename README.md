@@ -1,5 +1,5 @@
 # yamenu
-##A simple gui application runner menu made using opengl
+## A simple gui application runner menu made using opengl
 
 ### installation
 
@@ -17,4 +17,4 @@ on linux u also need the freetype lib installed on your system
 
 >if the build succeeds executable can be found in build/yamenu
 
-
+x
