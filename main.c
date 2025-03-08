@@ -23,9 +23,9 @@ int main(int argc, char **argv) {
 	YM_Window ym_window;
 	YM_Mouse mouse;
 	YM_Context context;
-    float labels_dynamic_loc[MAX_LABEL_COUNT];
+	float labels_dynamic_loc[MAX_LABEL_COUNT];
 	ym_window = ym_create_window();
-
+    	
 	context.window = &ym_window;
     
 	ym_create_text_renderer(&context);
@@ -34,9 +34,9 @@ int main(int argc, char **argv) {
    
 	YM_Element *rect = ym_render_rectangle(false, "");
 	ym_window.running = true;
-
+ 
 	glm_ortho(0.0, ym_window.width, 0.0, ym_window.height, -2.0, 1.0f,
-			  context.projection);
+		  context.projection);
 
 	SDL_Event event;
 
@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
 	YM_Element *input_text = ym_render_text(input, 10, ym_window.height - (rect->scale.y / 2), &context, LABELTEXT_NORMAL_COLOR);
 
 	YM_String_List app_list;
-    YM_Label_List labels;
+	YM_Label_List labels;
 
 	app_list = ym_map_directory(&context);
 
@@ -64,23 +64,23 @@ int main(int argc, char **argv) {
 
 	ym_set_scale(cursor_block, 15, 25);
 	ym_set_position(cursor_block, (ym_window.width - cursor_block->scale.x) / 2.2,
-					(ym_window.height - cursor_block->scale.y) / 2);
+			(ym_window.height - cursor_block->scale.y) / 2);
 	ym_set_color_rgba(cursor_block, CURSOR_COLOR);
 
-    labels.line_offset = 340;
+	labels.line_offset = 340;
     
-    for (uint32_t i = 0; i < MAX_LABEL_COUNT; i++) {
-        labels.line_offset -= 50;
-        labels.list[i] = *ym_render_label(app_list.list[i], 0, labels.line_offset,
-                                          &context, LABELTEXT_NORMAL_COLOR, LABELBG_COLOR);
-    }
-    labels.line_offset = 340;
+	for (uint32_t i = 0; i < MAX_LABEL_COUNT; i++) {
+		labels.line_offset -= 50;
+		labels.list[i] = *ym_render_label(app_list.list[i], 0, labels.line_offset,
+						  &context, LABELTEXT_NORMAL_COLOR, LABELBG_COLOR);
+	}
+	labels.line_offset = 340;
 
-    SDL_StartTextInput(ym_window.sdl_window);
+	SDL_StartTextInput(ym_window.sdl_window);
 	bool is_typing = false;
 
 	while (ym_window.running) {
-        SDL_SetWindowKeyboardGrab(ym_window.sdl_window, true);
+		SDL_SetWindowKeyboardGrab(ym_window.sdl_window, true);
 		while (SDL_PollEvent(&event)) {
 			switch (event.type) {
 			case SDL_EVENT_QUIT:
@@ -106,41 +106,41 @@ int main(int argc, char **argv) {
 				}
 				if (event.key.key == SDLK_DOWN) {
 					if (cursor_index < MAX_LABEL_COUNT - 1) {
-                        cursor_index++;
+						cursor_index++;
 						cursor_target_x =
 							labels.list[cursor_index].text_element->last_glyph_x + cursor_block->scale.x;
 						cursor_target_y =
-						    labels.list[cursor_index].text_element->transform.y;
+							labels.list[cursor_index].text_element->transform.y;
 					} else {
 						cursor_index = 0;
-                        cursor_target_x =
+						cursor_target_x =
 							labels.list[cursor_index].text_element->last_glyph_x + cursor_block->scale.x;
 						cursor_target_y =
-						    labels.list[cursor_index].text_element->transform.y;
+							labels.list[cursor_index].text_element->transform.y;
 					}
 				}
 				if (event.key.key == SDLK_UP) {
 					if (cursor_index != 0) {
 						cursor_index--;
 						cursor_target_x =
-						    labels.list[cursor_index].text_element->last_glyph_x + cursor_block->scale.x;
+							labels.list[cursor_index].text_element->last_glyph_x + cursor_block->scale.x;
 						cursor_target_y =
 							labels.list[cursor_index].text_element->transform.y;
 					}
 				}
-                if (event.key.key == SDLK_RETURN) {
+				if (event.key.key == SDLK_RETURN) {
 					if (cursor_index >= 0) {
-                        printf("%d\n", cursor_index);
-                        ym_destroy_list(&app_list);
-                        ym_clean_up(&ym_window);
-                        ym_execute_app(labels.list[cursor_index].label_text);
+						printf("%d\n", cursor_index);
+						ym_destroy_list(&app_list);
+						ym_clean_up(&ym_window);
+						ym_execute_app(labels.list[cursor_index].label_text);
 					}
 				}
-                if (event.key.key == SDLK_ESCAPE) {
-                    ym_destroy_list(&app_list);
-                    ym_clean_up(&ym_window);
-                    return 0;
-                }
+				if (event.key.key == SDLK_ESCAPE) {
+					ym_destroy_list(&app_list);
+					ym_clean_up(&ym_window);
+					return 0;
+				}
 				break;
 			case SDL_EVENT_TEXT_INPUT:                
 				if (!is_typing && input_cursor < sizeof(input)) {                    
@@ -148,39 +148,39 @@ int main(int argc, char **argv) {
 					cursor_target_x =
 						input_text->last_glyph_x + cursor_block->scale.x * 2.1;
 					cursor_target_y = input_text->transform.y - 2.6;
-                    uint32_t match_count = 0;
-                    if (strlen(input) > 0 ) {
-                        labels.line_offset = 340;
-                        for (uint32_t i = 0; i < app_list.size; i++) {
-                            if (strstr(app_list.list[i] , input) && match_count < MAX_LABEL_COUNT) {
-                                labels.line_offset -= 50;
-                                labels.list[match_count] = *ym_render_label(app_list.list[i], 0, labels.line_offset, &context, LABELTEXT_NORMAL_COLOR, LABELBG_COLOR);
-                                match_count++;
-                            }
-                        }
-                    }
-                    cursor_index = 0;
-                    break;
-                }
-                break;
+					uint32_t match_count = 0;
+					if (strlen(input) > 0 ) {
+						labels.line_offset = 340;
+						for (uint32_t i = 0; i < app_list.size; i++) {
+							if (strstr(app_list.list[i] , input) && match_count < MAX_LABEL_COUNT) {
+								labels.line_offset -= 50;
+								labels.list[match_count] = *ym_render_label(app_list.list[i], 0, labels.line_offset, &context, LABELTEXT_NORMAL_COLOR, LABELBG_COLOR);
+								match_count++;
+							}
+						}
+					}
+					cursor_index = 0;
+					break;
+				}
+				break;
 			default:
 				mouse.left_button_down = false;
 				break;
 			}
 		}
         
-        for (uint32_t i = 0; i < MAX_LABEL_COUNT - 1; i++) {
-            if (ym_check_mouse_intersection(mouse, *labels.list[i].bg_element)) {
-                ym_set_color_rgba(labels.list[i].text_element, LABELTEXT_HOVER_COLOR);
-            }else{
-                ym_set_color_rgba(labels.list[i].text_element, LABELTEXT_NORMAL_COLOR);
-            }
-            if (ym_check_mouse_click(&mouse, labels.list[i].bg_element)) {
-                ym_destroy_list(&app_list);
-                ym_clean_up(&ym_window);
-                ym_execute_app(labels.list[i].label_text);
-            }
-        }
+		for (uint32_t i = 0; i < MAX_LABEL_COUNT - 1; i++) {
+			if (ym_check_mouse_intersection(mouse, *labels.list[i].bg_element)) {
+				ym_set_color_rgba(labels.list[i].text_element, LABELTEXT_HOVER_COLOR);
+			}else{
+				ym_set_color_rgba(labels.list[i].text_element, LABELTEXT_NORMAL_COLOR);
+			}
+			if (ym_check_mouse_click(&mouse, labels.list[i].bg_element)) {
+				ym_destroy_list(&app_list);
+				ym_clean_up(&ym_window);
+				ym_execute_app(labels.list[i].label_text);
+			}
+		}
         
 		ym_cursor_point_to(cursor_block, cursor_target_x, cursor_target_y);
 
@@ -189,23 +189,23 @@ int main(int argc, char **argv) {
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		ym_draw_element(rect, rect_shader, &context, YM_NO_BORDER);
-        ym_draw_text(input, &context, input_text);
-        ym_draw_label_list(&app_list, &labels, &context, MAX_LABEL_COUNT);
-        ym_draw_element(banner, banner_shader, &context, YM_NO_BORDER);
-        ym_draw_element(cursor_block, cursor_block_shader, &context, YM_NO_BORDER);
+		ym_draw_text(input, &context, input_text);
+		ym_draw_label_list(&app_list, &labels, &context, MAX_LABEL_COUNT);
+		ym_draw_element(banner, banner_shader, &context, YM_NO_BORDER);
+		ym_draw_element(cursor_block, cursor_block_shader, &context, YM_NO_BORDER);
         
 		ym_swap_buffers(&ym_window);
 	}
     
 	ym_clean_up(&ym_window);
 	ym_destroy_list(&app_list);
-    ym_destroy_labels(&labels, MAX_LABEL_COUNT);
-    ym_free_element(rect);
+	ym_destroy_labels(&labels, MAX_LABEL_COUNT);
+	ym_free_element(rect);
 	ym_free_element(banner);
-    ym_free_element(cursor_block);
-    free(rect_shader);
-    free(banner_shader);
-    free(cursor_block_shader);
+	ym_free_element(cursor_block);
+	free(rect_shader);
+	free(banner_shader);
+	free(cursor_block_shader);
     
-    return 0;
+	return 0;
 }
