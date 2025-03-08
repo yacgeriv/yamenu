@@ -16,5 +16,3 @@ this will also build the thirdparty dependencies
 on linux u also need the freetype lib installed on your system
 
 >if the build succeeds executable can be found in build/yamenu
-
-x
