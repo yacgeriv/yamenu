@@ -8,7 +8,7 @@ clone this repo with :
 git clone https://github.com/yacgeriv/yamenu.git --recursive
 ```
 
-for linux run the following command start the build :
+on linux run the following command to start the build :
 ```
 sh compile.sh
 ```
