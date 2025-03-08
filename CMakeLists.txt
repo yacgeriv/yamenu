@@ -12,6 +12,7 @@ endif()
 if(EXISTS "vendor/SDL/build/SDL3.dll") 
     file(COPY vendor/SDL/build/SDL3.dll DESTINATION ${CMAKE_SOURCE_DIR}/build)
 endif()
+
 project(yamenu)
 
 add_executable(yamenu main.c src/yamenu.c ${SRC_FILES})

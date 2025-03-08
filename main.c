@@ -9,7 +9,7 @@ const YM_RGBA LABELBG_COLOR = {(float) 0x20 / 255, (float) 0x20 / 255, (float) 0
 const YM_RGBA CURSOR_COLOR = {0.0f, 0.87f, 1.0f, 1.0f};
 const YM_RGBA LABELTEXT_HOVER_COLOR = {0.0f, 0.87f, 1.0f, 1.0};
 
-const char *BANNER_BG = "bg.jpg"; 
+const char *BANNER_BG = "/usr/share/yamenu/bg.jpg"; 
 
 char input[528];
 uint32_t input_cursor = 0;
