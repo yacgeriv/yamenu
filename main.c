@@ -176,8 +176,15 @@ int main(int argc, char **argv) {
 				ym_set_color_rgba(labels.list[i].text_element, LABELTEXT_NORMAL_COLOR);
 			}
 			if (ym_check_mouse_click(&mouse, labels.list[i].bg_element)) {
-				ym_destroy_list(&app_list);
 				ym_clean_up(&ym_window);
+				ym_destroy_list(&app_list);
+				ym_destroy_labels(&labels, MAX_LABEL_COUNT);
+				ym_free_element(rect);
+				ym_free_element(banner);
+				ym_free_element(cursor_block);
+				free(rect_shader);
+				free(banner_shader);
+				free(cursor_block_shader);
 				ym_execute_app(labels.list[i].label_text);
 			}
 		}
