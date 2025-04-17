@@ -169,7 +169,7 @@ int main(int argc, char **argv) {
 			}
 		}
         
-		for (uint32_t i = 0; i < MAX_LABEL_COUNT - 1; i++) {
+		for (uint32_t i = 0; i < MAX_LABEL_COUNT; i++) {
 			if (ym_check_mouse_intersection(mouse, *labels.list[i].bg_element)) {
 				ym_set_color_rgba(labels.list[i].text_element, LABELTEXT_HOVER_COLOR);
 			}else{
