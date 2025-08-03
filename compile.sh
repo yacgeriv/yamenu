@@ -8,6 +8,14 @@
      sudo cp bg.jpg /usr/share/yamenu/
  fi
 
+ if [ -d ~/.config/yamenu/ ]
+ then
+     echo ""
+ else
+     sudo mkdir ~/.config/yamenu/
+     sudo cp ./config.ini ~/.config/yamenu/config.ini
+ fi
+
 cmake vendor/SDL/ -B vendor/SDL/build
 cmake --build vendor/SDL/build
 cmake vendor/cglm/ -B vendor/cglm/build

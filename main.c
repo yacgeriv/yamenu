@@ -1,7 +1,10 @@
+#include "SDL3/SDL_power.h"
 #include "yamenu.h"
+#include <stdio.h>
 #include <unistd.h>
 #define SHADERS_IMPL
 #include "shaders.h"
+#include "config.h"
 
 const YM_RGBA BACKGROUND_COLOR = {(float) 0x20 / 255, (float) 0x20 / 255, (float) 0x20 / 255, (float) 0x20 / 255};
 const YM_RGBA LABELTEXT_NORMAL_COLOR = {(float)0x39 / 255, (float)0x206 / 255, (float)0x64 / 255, 1.0f};
@@ -9,7 +12,7 @@ const YM_RGBA LABELBG_COLOR = {(float) 0x20 / 255, (float) 0x20 / 255, (float) 0
 const YM_RGBA CURSOR_COLOR = {0.0f, 0.87f, 1.0f, 1.0f};
 const YM_RGBA LABELTEXT_HOVER_COLOR = {0.0f, 0.87f, 1.0f, 1.0};
 
-const char *BANNER_BG = "/usr/share/yamenu/bg.jpg"; 
+//const char *BANNER_BG = "/usr/share/yamenu/bg.jpg"; 
 
 char input[528];
 uint32_t input_cursor = 0;
@@ -23,6 +26,12 @@ int main(int argc, char **argv) {
 	YM_Window ym_window;
 	YM_Mouse mouse;
 	YM_Context context;
+
+	Settings user_settings;
+	if(read_config_file(&user_settings)) {
+	//	perror("failed to find config file under ~.config/yamenu/config.ini\n");
+	}
+
 	float labels_dynamic_loc[MAX_LABEL_COUNT];
 	ym_window = ym_create_window();
     	
@@ -53,7 +62,7 @@ int main(int argc, char **argv) {
 
 	YM_Shader *banner_shader =
 		ym_create_shader(VERTEX_SHADER, TEXTURE_F_SHADER);
-	YM_Element *banner = ym_render_rectangle(true, BANNER_BG);
+	YM_Element *banner = ym_render_rectangle(true, user_settings.background_path);
     
 	ym_set_scale(banner, ym_window.width, 120);
 	ym_set_position(banner, 0, ym_window.height - 160);

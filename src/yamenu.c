@@ -242,7 +242,7 @@ void ym_create_text_renderer(YM_Context *context) {
 
 	FT_Face font_face;
 
-	if (FT_New_Face(font, "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 0, &font_face)) {
+	if (FT_New_Face(font, "/usr/share/fonts/TTF/DejaVuSans.ttf", 0, &font_face)) {
 		perror("couldn't load the fonts\n");
 	}
 
