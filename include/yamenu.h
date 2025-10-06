@@ -158,6 +158,6 @@ bool ym_match(YM_Label* label, const char* input);
 
 void ym_draw_label_list(YM_String_List *str_list,YM_Label_List *list, YM_Context *context, size_t nof_labels) ;
 
-void ym_execute_app(const char* name_str);
+void ym_execute_app(const char* name_str, char** envp);
 
 #endif

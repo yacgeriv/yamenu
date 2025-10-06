@@ -10,8 +10,15 @@ int read_config_file(Settings* user_settings) {
 	char config_path[512] = "/.config/yamenu/config.ini";	
 	char* home_dir = getenv("HOME");
 
-	strncat(home_dir, config_path, strlen(config_path));
-	FILE *config_file = fopen(home_dir, "r");
+    char full_config_path[512];
+        
+    if (snprintf(full_config_path, sizeof(full_config_path), "%s%s", 
+                 home_dir, config_path) >= sizeof(full_config_path)) 
+    {
+        return 0;
+    }        
+
+	FILE *config_file = fopen(full_config_path, "r");
 	
 	if(config_file == NULL)	{
 		perror("couldn't read config file\n");

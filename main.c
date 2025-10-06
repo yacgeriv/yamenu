@@ -12,8 +12,6 @@ const YM_RGBA LABELBG_COLOR = {(float) 0x20 / 255, (float) 0x20 / 255, (float) 0
 const YM_RGBA CURSOR_COLOR = {0.0f, 0.87f, 1.0f, 1.0f};
 const YM_RGBA LABELTEXT_HOVER_COLOR = {0.0f, 0.87f, 1.0f, 1.0};
 
-//const char *BANNER_BG = "/usr/share/yamenu/bg.jpg"; 
-
 char input[528];
 uint32_t input_cursor = 0;
 
@@ -22,7 +20,7 @@ uint32_t cursor_index = 0;
 
 const uint32_t MAX_LABEL_COUNT = 6;
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv, char** envp) {
 	YM_Window ym_window;
 	YM_Mouse mouse;
 	YM_Context context;
@@ -140,9 +138,9 @@ int main(int argc, char **argv) {
 				if (event.key.key == SDLK_RETURN) {
 					if (cursor_index >= 0) {
 						printf("%d\n", cursor_index);
-						ym_destroy_list(&app_list);
+                        ym_execute_app(labels.list[cursor_index].label_text, envp);
+                        ym_destroy_list(&app_list);
 						ym_clean_up(&ym_window);
-						ym_execute_app(labels.list[cursor_index].label_text);
 					}
 				}
 				if (event.key.key == SDLK_ESCAPE) {
@@ -185,7 +183,8 @@ int main(int argc, char **argv) {
 				ym_set_color_rgba(labels.list[i].text_element, LABELTEXT_NORMAL_COLOR);
 			}
 			if (ym_check_mouse_click(&mouse, labels.list[i].bg_element)) {
-				ym_clean_up(&ym_window);
+				ym_execute_app(labels.list[i].label_text, envp);
+                ym_clean_up(&ym_window);
 				ym_destroy_list(&app_list);
 				ym_destroy_labels(&labels, MAX_LABEL_COUNT);
 				ym_free_element(rect);
@@ -194,7 +193,6 @@ int main(int argc, char **argv) {
 				free(rect_shader);
 				free(banner_shader);
 				free(cursor_block_shader);
-				ym_execute_app(labels.list[i].label_text);
 			}
 		}
         

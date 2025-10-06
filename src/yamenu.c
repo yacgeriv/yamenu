@@ -484,10 +484,13 @@ void ym_draw_label_list(YM_String_List *str_list,YM_Label_List *list, YM_Context
 		ym_draw_label(&list->list[i], context);
 	}
 }
-void ym_execute_app(const char* name_str) {
-	char user_binary_path[255] = "/usr/bin/";    
-	char *arg[] = {(char*)name_str, 0};
-	strcat(user_binary_path, name_str);
-    
-	execvp(user_binary_path, arg);
+void ym_execute_app(const char *name_str, char **envp) {
+  
+    char *argv[] = {
+        "/bin/sh",
+        "-c",
+        (char *)name_str,
+        NULL
+    };
+    execve("/bin/sh", argv, envp);
 }
